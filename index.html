@@ -597,11 +597,25 @@
   function waitSeeked(){
     return new Promise(resolve => {
       let done = false;
-      const finish = () => { if (done) return; done = true; video.removeEventListener('seeked', onSeeked); resolve(); };
-      const onSeeked = () => finish();
-      video.addEventListener('seeked', onSeeked);
-      // Mobile browsers occasionally never fire 'seeked' for a given seek — without
-      // this, the whole scan would just hang silently forever on that one frame.
+      const finish = () => { if (done) return; done = true; resolve(); };
+      if (typeof video.requestVideoFrameCallback === 'function'){
+        // The 'seeked' event only means the browser accepted the seek — on some
+        // mobile browsers it can fire before the new frame is actually decoded
+        // and ready to read, so a canvas capture right after grabs stale or
+        // blank content. requestVideoFrameCallback specifically waits for a
+        // real decoded frame to be presented, which is what we actually need.
+        video.requestVideoFrameCallback(() => finish());
+      } else {
+        const onSeeked = () => {
+          video.removeEventListener('seeked', onSeeked);
+          // Give the decoder a couple of extra paint cycles before reading,
+          // since 'seeked' alone isn't always a hard guarantee either.
+          requestAnimationFrame(() => requestAnimationFrame(finish));
+        };
+        video.addEventListener('seeked', onSeeked);
+      }
+      // Mobile browsers occasionally never fire either signal for a given seek —
+      // without this, the whole scan would just hang silently forever on that frame.
       setTimeout(finish, 3000);
     });
   }
