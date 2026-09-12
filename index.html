@@ -676,7 +676,7 @@
   }
 
   // ---------- Phase 1: find every stretch of real gameplay (splits into separate games) ----------
-  async function findGameplaySegments(worker, naturalW, naturalH, fctx){
+  async function findGameplaySegments(worker, naturalW, naturalH){
     const ax = Math.round(AMMO_BAND.x * naturalW), ay = Math.round(AMMO_BAND.y * naturalH);
     const aw = Math.round(AMMO_BAND.w * naturalW), ah = Math.round(AMMO_BAND.h * naturalH);
     const SCALE = 3;
@@ -689,9 +689,11 @@
     for (let t = 0; t < duration; t += coarseInterval){
       video.currentTime = t;
       await waitSeeked();
-      fctx.drawImage(video, 0, 0, naturalW, naturalH);
       rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
-      rctx.drawImage(frameCanvas, ax, ay, aw, ah, 0, 0, roiCanvas.width, roiCanvas.height);
+      // Crop straight from the video element at full native detail — no full-frame
+      // canvas ever gets created, so this stays cheap on memory regardless of the
+      // source video's resolution, without losing any detail in the small crop.
+      rctx.drawImage(video, ax, ay, aw, ah, 0, 0, roiCanvas.width, roiCanvas.height);
       preprocessWhiteText(rctx, roiCanvas.width, roiCanvas.height);
       let hit = false;
       try {
@@ -733,11 +735,11 @@
   }
 
   // ---------- Phase 3: for each death, find when control actually resumes ----------
-  async function findRespawnTimes(worker, deathTimes, naturalW, naturalH, fctx){
+  async function findRespawnTimes(worker, deathTimes, naturalW, naturalH){
     if (!deathTimes.length) return;
     const ax = Math.round(AMMO_BAND.x*naturalW), ay = Math.round(AMMO_BAND.y*naturalH);
     const aw = Math.round(AMMO_BAND.w*naturalW), ah = Math.round(AMMO_BAND.h*naturalH);
-    const SCALE = 2;
+    const SCALE = 3;
     roiCanvas.width = aw*SCALE; roiCanvas.height = ah*SCALE;
     const rctx = roiCanvas.getContext('2d');
     const FORWARD_WINDOW = 12, STEP = 1;
@@ -748,10 +750,9 @@
         const t = Math.min(duration, d + dt);
         video.currentTime = t;
         await waitSeeked();
-        fctx.drawImage(video, 0, 0, naturalW, naturalH);
         rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
-        rctx.drawImage(frameCanvas, ax, ay, aw, ah, 0, 0, roiCanvas.width, roiCanvas.height);
-        preprocessCanvas(rctx, roiCanvas.width, roiCanvas.height);
+        rctx.drawImage(video, ax, ay, aw, ah, 0, 0, roiCanvas.width, roiCanvas.height);
+        preprocessWhiteText(rctx, roiCanvas.width, roiCanvas.height);
         try {
           ocrAttempts++;
           const { data } = await worker.recognize(roiCanvas);
@@ -786,20 +787,14 @@
       scanStatus.textContent = 'Could not load the detection engine (offline or blocked). Try again, or check your connection.';
       return;
     }
-    // Cap the working resolution. Phone recordings are often 4K+, and mobile
-    // browsers have much tighter canvas/memory limits than desktop — processing
-    // at full native resolution was very likely silently failing there (every
-    // OCR/draw call wrapped in a try/catch that swallows errors, so it would
-    // just finish with zero detections and no visible error at all).
-    const MAX_DIM = 1920;
-    const rawW = video.videoWidth, rawH = video.videoHeight;
-    const scaleDown = Math.min(1, MAX_DIM / Math.max(rawW, rawH));
-    const naturalW = Math.round(rawW * scaleDown), naturalH = Math.round(rawH * scaleDown);
-    frameCanvas.width = naturalW; frameCanvas.height = naturalH;
-    const fctx = frameCanvas.getContext('2d');
+    // Native resolution — we never build a full-size frame canvas (every crop
+    // below is drawn directly from the video element into a small canvas), so
+    // there's no memory reason to downscale, and full detail matters for the
+    // small "ELIMINATED:" text, which is marginal to read even at full size.
+    const naturalW = video.videoWidth, naturalH = video.videoHeight;
 
     detectBigStatus.textContent = 'Finding every stretch of gameplay…';
-    const segments = await findGameplaySegments(worker, naturalW, naturalH, fctx);
+    const segments = await findGameplaySegments(worker, naturalW, naturalH);
     games = segments.map((seg, i) => ({ index: i, start: seg.start, end: seg.end }));
     detectSmallStatus.textContent = games.length > 1
       ? `Found ${games.length} separate matches.`
@@ -833,12 +828,11 @@
       for (let t = seg.start; t < seg.end; t += interval){
         video.currentTime = t;
         await waitSeeked();
-        fctx.drawImage(video, 0, 0, naturalW, naturalH);
         rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
-        rctx.drawImage(frameCanvas, tx, ty, tw, th, 0, 0, tw*SCALE, th*SCALE);
-        rctx.drawImage(frameCanvas, bx, by, bw, bh, 0, th*SCALE, bw*SCALE, bh*SCALE);
+        rctx.drawImage(video, tx, ty, tw, th, 0, 0, tw*SCALE, th*SCALE);
+        rctx.drawImage(video, bx, by, bw, bh, 0, th*SCALE, bw*SCALE, bh*SCALE);
         if (useCustom){
-          rctx.drawImage(frameCanvas, cx, cy, cw, ch, 0, (th+bh)*SCALE, cw*SCALE, ch*SCALE);
+          rctx.drawImage(video, cx, cy, cw, ch, 0, (th+bh)*SCALE, cw*SCALE, ch*SCALE);
         }
         preprocessCanvas(rctx, roiCanvas.width, roiCanvas.height);
         try {
@@ -879,7 +873,7 @@
     events.sort((a,b) => a.time - b.time);
     detectBigStatus.textContent = 'Finding when you respawn after each death…';
     scanProgress.style.width = '85%';
-    await findRespawnTimes(worker, dedupedDeathTimes(), naturalW, naturalH, fctx);
+    await findRespawnTimes(worker, dedupedDeathTimes(), naturalW, naturalH);
     scanProgress.style.width = '100%';
 
     await worker.terminate();
