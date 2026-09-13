@@ -123,12 +123,33 @@
   .panel .sub{color:var(--muted); font-size:13px; margin: 0 0 18px; line-height:1.5;}
 
   .split-layout{ display:flex; gap:26px; align-items:flex-start; }
-  .split-video{ flex: 0 0 380px; }
+  .split-video{ flex: 0 0 380px; transition: flex-basis .2s ease; }
+  .split-video.roi-enlarged{ flex: 1 1 100%; }
   .split-info{ flex: 1 1 auto; min-width:0; }
   @media (max-width: 800px){
     .split-layout{ flex-direction:column; }
     .split-video{ flex:none; width:100%; }
   }
+
+  .roi-diagram-frame{
+    position:relative; width:100%; aspect-ratio:16/9; background:#0A0A0C;
+    border:1px solid var(--line); border-radius:4px; overflow:hidden; margin-top:10px;
+  }
+  .roi-diagram-banner{
+    position:absolute; left:18%; bottom:16%; width:50%;
+    background:rgba(15,15,18,0.9); color:#fff; font-family:'JetBrains Mono',monospace;
+    font-size:11px; padding:6px 9px; border-radius:2px; white-space:nowrap;
+  }
+  .roi-diagram-banner b{ color: var(--kill-bright); }
+  .roi-diagram-box{
+    position:absolute; left:17%; bottom:14%; width:52%; height:15%;
+    border:2px dashed var(--cyan); border-radius:2px;
+  }
+  .roi-diagram-box::after{
+    content:'drag a box like this'; position:absolute; left:0; top:-20px;
+    font-size:10px; color:var(--cyan); font-family:'JetBrains Mono',monospace; white-space:nowrap;
+  }
+  .roi-diagram-caption{ font-size:11px; color:var(--muted); margin-top:8px; line-height:1.5; }
 
   /* results screen: big video on top, everything else below — the clip table
      scrolls within its own bounded area instead of pushing the download
@@ -203,6 +224,20 @@
   .req-table dt{ color:var(--muted); font-family:'JetBrains Mono',monospace; white-space:nowrap; }
   .req-table dd{ margin:0; color:var(--text); line-height:1.5; }
   .req-table dd b{ color:var(--kill-bright); }
+
+  .platform-tips{
+    margin-top:12px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
+  }
+  .platform-tip .pt-title{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:12.5px; color:var(--kill-bright);
+    text-transform:uppercase; letter-spacing:0.3px; margin-bottom:6px;
+  }
+  .platform-tip ol{ margin:0; padding-left:16px; font-size:11.5px; color:var(--text); line-height:1.6; }
+  .platform-tip li{ margin-bottom:6px; }
+  .platform-tip .data{ font-size:10.5px; color:var(--cyan); }
+  @media (max-width: 700px){
+    .platform-tips{ grid-template-columns:1fr; }
+  }
 
   .row-status{font-size:11px; color:var(--muted); margin-top:4px; max-width:150px; min-height:0;}
   .row-status.err{color:#ffb3bd;}
@@ -329,6 +364,33 @@
     <div class="status-line" id="loadStatus"></div>
     <div class="hint" id="serverStatus"></div>
 
+    <div id="step1Extra" style="display:none;">
+      <div class="split-layout">
+        <div class="split-video"><div class="stage" id="stage2"></div></div>
+        <div class="split-info">
+          <div class="field">
+            <label>In-game name / gamertag (optional backup signal)</label>
+            <input type="text" id="usernameInput" placeholder="e.g. Ghost_47">
+          </div>
+
+          <div class="req-box" style="margin-top:0;">
+            <p class="hint" style="margin-top:0;">
+              Detection reads two specific things on screen: the banner that says <b>"ELIMINATED: PlayerName"</b>, and the <b>"1ST KILL" / "2ND KILL"</b>-style counter shown with it. It already checks the usual spot those appear in for most Call of Duty titles — but if your HUD, a streaming overlay, or a different game puts them somewhere else (like the "ELIMINATED:" banner sitting lower on screen, or off to one side), scrub the video to a moment where you can actually see that banner, then draw a box around <b>just that banner</b> — not the whole HUD, not the minimap, just the "ELIMINATED:" text and the kill counter next to it.
+            </p>
+            <div class="roi-diagram-frame">
+              <div class="roi-diagram-box"></div>
+              <div class="roi-diagram-banner">ELIMINATED: <b>PlayerName</b></div>
+            </div>
+            <p class="roi-diagram-caption">Example — tight around the text only, like the dashed box above. Not the reticle, not the minimap, not the weapon icon.</p>
+            <div class="btn-row" style="margin-top:10px;">
+              <button id="drawRoiBtn2">Draw a box around your kill banner</button>
+            </div>
+            <div class="hint" id="roiStatus2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <details class="req-box" open>
       <summary>Upload requirements — read this first</summary>
       <dl class="req-table">
@@ -347,28 +409,39 @@
       </dl>
     </details>
 
-    <div id="step1Extra" style="display:none;">
-      <div class="divider"></div>
-      <div class="split-layout">
-        <div class="split-video"><div class="stage" id="stage2"></div></div>
-        <div class="split-info">
-          <div class="field">
-            <label>In-game name / gamertag (optional backup signal)</label>
-            <input type="text" id="usernameInput" placeholder="e.g. Ghost_47">
-          </div>
-
-          <div class="req-box" style="margin-top:0;">
-            <p class="hint" style="margin-top:0;">
-              Detection reads two specific things on screen: the banner that says <b>"ELIMINATED: PlayerName"</b>, and the <b>"1ST KILL" / "2ND KILL"</b>-style counter shown with it. It already checks the usual spot those appear in for most Call of Duty titles — but if your HUD, a streaming overlay, or a different game puts them somewhere else (like the "ELIMINATED:" banner sitting lower on screen, or off to one side), scrub the video to a moment where you can actually see that banner, then draw a box around <b>just that banner</b> — not the whole HUD, not the minimap, just the "ELIMINATED:" text and the kill counter next to it.
-            </p>
-            <div class="btn-row" style="margin-top:10px;">
-              <button id="drawRoiBtn2">Draw a box around your kill banner</button>
-            </div>
-            <div class="hint" id="roiStatus2"></div>
-          </div>
+    <details class="req-box">
+      <summary>Don't have the file yet? How to get it from your platform</summary>
+      <div class="platform-tips">
+        <div class="platform-tip">
+          <div class="pt-title">PlayStation 5</div>
+          <ol>
+            <li>Press <b>Share</b> during/after the play to save the clip, or hold the PS button → <b>Create</b> → start a manual recording for something longer.</li>
+            <li>From the Share menu, choose <b>Upload</b> → <b>YouTube</b> (needs your PS5 linked to a YouTube account once) — uploads straight from the console, no cables or USB needed.</li>
+            <li>On a computer, go to <span class="data">studio.youtube.com</span> → <b>Content</b> → find the video → click the <b>⋮</b> menu → <b>Download</b>. That's YouTube's own official feature for downloading your own uploads, so it gives you back the real file.</li>
+            <li>Upload that file here.</li>
+          </ol>
+        </div>
+        <div class="platform-tip">
+          <div class="pt-title">Xbox</div>
+          <ol>
+            <li>Press <b>Share</b> for a quick clip, or Xbox button → <b>Capture & share</b> → <b>Start recording</b> for something longer (up to ~10 min internal, longer to USB).</li>
+            <li>Open the <b>Captures</b> app → <b>Manage</b> → select clips → <b>Copy to USB</b> (format the USB as <b>NTFS</b> on a PC first).</li>
+            <li>Easier alternative: on a Windows PC, open the <b>Xbox app</b> → your profile → <b>Captures</b> — downloads straight to the PC, no USB needed.</li>
+          </ol>
+        </div>
+        <div class="platform-tip">
+          <div class="pt-title">PC</div>
+          <ol>
+            <li>Already on your PC as a file — no transfer step needed.</li>
+            <li>No extra software: <b>Win + Alt + G</b> (Xbox Game Bar, built into Windows) saves the last 30s to <span class="data">Videos → Captures</span> as .mp4.</li>
+            <li>NVIDIA/AMD GPU: the <b>NVIDIA app</b> (Instant Replay) or <b>AMD Adrenalin</b> (ReLive) can buffer much longer, up to ~20 min.</li>
+            <li>For full control over a whole session, <b>OBS Studio</b> (free) records everything start to finish.</li>
+          </ol>
         </div>
       </div>
+    </details>
 
+    <div id="step1ExtraBtn" style="display:none;">
       <div class="btn-row">
         <div class="spacer"></div>
         <button class="primary" id="toStep3Btn">Start automatic detection</button>
@@ -673,6 +746,7 @@
     activeTab = 'kill'; activeGame = 'all';
     maxStepReached = 1;
     document.getElementById('step1Extra').style.display = 'none';
+    document.getElementById('step1ExtraBtn').style.display = 'none';
     loadStatus.className = 'status-line show';
     loadStatus.textContent = 'Loading "' + f.name + '"…';
     video.src = URL.createObjectURL(f);
@@ -735,6 +809,7 @@
     loadStatus.className = 'status-line show ok';
     loadStatus.textContent = `Video ready — ${fmtTime(duration)} long.`;
     document.getElementById('step1Extra').style.display = 'block';
+    document.getElementById('step1ExtraBtn').style.display = 'block';
     moveVideoTo('stage2');
   });
 
@@ -743,11 +818,27 @@
   // ---------- optional region override ----------
   let dragging = false, dragStart = null;
   let activeRoiStage = 'stage4', activeRoiBtn = drawRoiBtn;
-  function activateRoiDrawing(stageId, btnEl, idleLabel){
+  function activateRoiDrawing(stageId, btnEl){
     activeRoiStage = stageId; activeRoiBtn = btnEl;
     moveVideoTo(stageId);
+    // The native player bar (play/pause, scrub, fullscreen) sits right over the
+    // bottom of the frame — exactly where a kill banner usually is — and it
+    // pops up on hover even when not clicked, covering the one thing you're
+    // trying to look at. Pausing on the current frame and hiding those controls
+    // while drawing gives a clean, static, fully-visible frame to work from.
+    video.pause();
+    video.controls = false;
+    // Also genuinely enlarge the video while drawing — the small side-by-side
+    // player made it hard to click precisely around small text like this.
+    const stageEl = document.getElementById(stageId);
+    if (stageEl && stageEl.parentElement) stageEl.parentElement.classList.add('roi-enlarged');
     roiOverlay.classList.add('roi-active');
     btnEl.textContent = 'Drag on the video above now…';
+  }
+  function restoreVideoControls(){
+    video.controls = true;
+    const stageEl = document.getElementById(activeRoiStage);
+    if (stageEl && stageEl.parentElement) stageEl.parentElement.classList.remove('roi-enlarged');
   }
   drawRoiBtn.addEventListener('click', () => activateRoiDrawing('stage4', drawRoiBtn));
   drawRoiBtn2.addEventListener('click', () => activateRoiDrawing('stage2', drawRoiBtn2));
@@ -765,6 +856,7 @@
     if (!dragging) return;
     dragging = false;
     roiOverlay.classList.remove('roi-active');
+    restoreVideoControls();
     const idleLabel = activeRoiBtn === drawRoiBtn2 ? 'Draw a box around your kill banner' : 'Draw a region on the video above';
     activeRoiBtn.textContent = idleLabel;
     const rect = roiOverlay.getBoundingClientRect();
@@ -1023,7 +1115,13 @@
       const lo = Math.max(0, i - WIN_RADIUS), hi = Math.min(hits.length, i + WIN_RADIUS + 1);
       return hits.slice(lo, hi).filter(x => x.hit).length >= MIN_IN_WIN;
     });
-    const GAME_GAP = 90; // seconds of no confirmed gameplay before we call it a new game
+    // Confirmed against real footage: a rough patch with several deaths chained
+    // close together can push 70-80s of real, continuous-match gameplay with no
+    // visible ammo counter — too close to the old 90s cutoff for comfort. A real
+    // between-match lobby break, by contrast, reliably runs well over two
+    // minutes. 120s keeps solid separation from that while giving death-chains
+    // enough room not to look like a new match.
+    const GAME_GAP = 120;
     const segments = [];
     let segStart = null, lastT = null;
     for (let i = 0; i < hits.length; i++){
