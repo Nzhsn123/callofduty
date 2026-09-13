@@ -152,6 +152,12 @@
   .status-line.err{border-color:#E8384F; color:#ffb3bd;}
   .status-line.ok{border-color:var(--ok); color:#a9e8bd;}
 
+  .row-status{font-size:11px; color:var(--muted); margin-top:4px; max-width:150px; min-height:0;}
+  .row-status.err{color:#ffb3bd;}
+  .row-status.ok a{color:var(--kill-bright); font-weight:600; text-decoration:none; border-bottom:1px solid var(--kill-bright);}
+  .row-progress-wrap{height:4px; width:100px; background:var(--panel-2); border-radius:2px; overflow:hidden; margin-top:4px;}
+  .row-progress-bar{height:100%; width:0%; background:var(--kill); transition:width .15s ease;}
+
   .divider{border:none; border-top:1px solid var(--line); margin:20px 0;}
   .subhead{font-size:12px; color:var(--muted); margin:0 0 10px; font-weight:500;}
 
@@ -1473,8 +1479,19 @@
       pbtn.addEventListener('click', () => previewClip(c));
       const dbtn = document.createElement('button');
       dbtn.className = 'small'; dbtn.textContent = 'Download';
-      dbtn.onclick = () => downloadSingleClip(c, idx);
-      tr6.append(pbtn, dbtn);
+      // This download works on its own, with no checkbox needed — the checkbox
+      // only controls what goes into the combined download below. Feedback for
+      // it shows right here, in the row, not in the shared status area at the
+      // bottom — that disconnect was very likely why it looked like nothing was
+      // happening: it was working, just reporting progress somewhere you weren't
+      // looking at.
+      const rowStatus = document.createElement('div');
+      rowStatus.className = 'row-status';
+      const rowProgress = document.createElement('div');
+      rowProgress.className = 'row-progress-wrap';
+      rowProgress.innerHTML = '<div class="row-progress-bar"></div>';
+      dbtn.onclick = () => downloadSingleClip(c, idx, rowStatus, rowProgress.firstElementChild);
+      tr6.append(pbtn, dbtn, rowStatus, rowProgress);
 
       tr.append(tdCb, tr2, tr3, tr4, tr5, tr6);
       clipsBody.appendChild(tr);
@@ -1489,7 +1506,11 @@
     if (!list.length) return;
     setBusy(true);
     await acquireWakeLock();
-    statusEl.className = 'status-line show';
+    // Preserve whatever class the element started with (a full-width shared
+    // status box vs. a compact per-row one look different on purpose) instead
+    // of forcing the same class onto both.
+    const baseClass = statusEl.className || 'status-line';
+    statusEl.className = baseClass + ' show';
     statusEl.textContent = 'Preparing…';
     progressEl.style.width = '0%';
     const w = video.videoWidth, h = video.videoHeight;
@@ -1505,7 +1526,7 @@
       } catch(e){}
       combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
     } catch (e) {
-      statusEl.className = 'status-line show err';
+      statusEl.className = baseClass + ' show err';
       statusEl.textContent = 'This browser does not support recording video from canvas.';
       setBusy(false); return;
     }
@@ -1515,7 +1536,7 @@
     const mimeCandidates = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
     const mime = mimeCandidates.find(m => MediaRecorder.isTypeSupported(m));
     if (!mime){
-      statusEl.className = 'status-line show err';
+      statusEl.className = baseClass + ' show err';
       statusEl.textContent = 'This browser cannot record video at all (no supported format found). Try Chrome, Firefox, or an up-to-date Safari.';
       setBusy(false);
       try { combinedStream.getTracks().forEach(t => t.stop()); } catch(e){}
@@ -1527,7 +1548,7 @@
     try {
       recorder = new MediaRecorder(combinedStream, { mimeType: mime });
     } catch (e) {
-      statusEl.className = 'status-line show err';
+      statusEl.className = baseClass + ' show err';
       statusEl.textContent = 'This browser refused to start recording (' + (e.message || 'unknown error') + '). Try a different browser.';
       setBusy(false);
       try { combinedStream.getTracks().forEach(t => t.stop()); } catch(e2){}
@@ -1580,7 +1601,7 @@
       if (lastExportUrl) URL.revokeObjectURL(lastExportUrl);
       const url = URL.createObjectURL(blob);
       lastExportUrl = url;
-      statusEl.className = 'status-line show ok';
+      statusEl.className = baseClass + ' show ok';
       statusEl.innerHTML = '';
       const link = document.createElement('a');
       link.style.color = 'var(--cyan)'; link.style.fontWeight = '600'; link.style.textDecoration='none'; link.style.borderBottom='1px solid var(--cyan)';
@@ -1591,7 +1612,7 @@
     } catch (err) {
       drawing = false;
       try { if (recorder.state !== 'inactive') recorder.stop(); } catch(e){}
-      statusEl.className = 'status-line show err';
+      statusEl.className = baseClass + ' show err';
       statusEl.textContent = 'Recording failed (' + ((err && err.message) || 'unknown error') + '). Try again — if it keeps happening, try a shorter clip or a different browser.';
     } finally {
       // Release the capture tracks explicitly — leaving the previous export's
@@ -1614,11 +1635,11 @@
     });
   });
 
-  async function downloadSingleClip(c, idx){
+  async function downloadSingleClip(c, idx, rowStatusEl, rowProgressEl){
     if (exporting) return;
     exporting = true; updateExportButtonState();
     const gameTag = games.length > 1 ? `-match${c.gameIndex+1}` : '';
-    await recordClips([c], `codclips-${activeTab}${gameTag}-${idx+1}.webm`, exportStatus, exportProgress, (busy) => {
+    await recordClips([c], `codclips-${activeTab}${gameTag}-${idx+1}.webm`, rowStatusEl || exportStatus, rowProgressEl || exportProgress, (busy) => {
       exporting = busy; updateExportButtonState();
     });
   }
