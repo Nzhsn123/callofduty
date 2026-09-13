@@ -13,14 +13,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #0A0E13;
+    --bg: #07090C;
     --panel: #10161D;
     --panel-2: #151D26;
-    --line: #212B36;
-    --text: #DDE3EA;
-    --muted: #7C8896;
-    --kill: #FF7A1A;
-    --kill-dim: #7A4318;
+    --line: #232E3A;
+    --text: #E7ECF1;
+    --muted: #8493A3;
+    --kill: #FF6A1A;
+    --kill-bright: #FF8A3D;
+    --kill-dim: #7A3A14;
     --cyan: #35C2FF;
     --cyan-dim: #1B5A78;
     --ok: #3FBF6F;
@@ -31,47 +32,67 @@
   h1,h2,h3{font-family:'Oswald',sans-serif;}
   .data{font-family:'JetBrains Mono', monospace;}
 
-  .topbar{
-    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
-    padding: 18px 28px; border-bottom: 1px solid var(--line);
-    background: linear-gradient(180deg, #0D1319, #0A0E13);
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative; overflow:hidden;
+    padding: 40px 24px 34px;
+    background:
+      radial-gradient(ellipse 800px 360px at 8% -20%, rgba(255,106,26,0.16), transparent 60%),
+      linear-gradient(180deg, #0C1116, #07090C);
+    border-bottom: 1px solid var(--line);
   }
-  .brand{ font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; letter-spacing:1.5px; color:var(--muted); }
+  .hero-inner{ max-width: 1020px; margin:0 auto; }
+  .brand{ font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; letter-spacing:2px; color:var(--muted); margin-bottom:14px; }
   .brand span{ color:var(--kill); }
-  .topbar-h1{
-    font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; margin:0;
-    color:var(--muted); font-weight:500;
+  .hero h1{
+    font-family:'Oswald',sans-serif; font-weight:700; font-size:38px; line-height:1.05;
+    margin:0 0 12px; color:var(--text); letter-spacing:-1px; max-width:640px;
+    text-transform:uppercase;
+  }
+  .hero h1 em{ font-style:normal; color:var(--kill); }
+  .hero-sub{ color:var(--muted); font-size:14.5px; line-height:1.6; margin:0; max-width:580px; }
+
+  /* tactical hazard-stripe divider — used once, sparingly */
+  .hazard{
+    height:5px;
+    background: repeating-linear-gradient(-45deg, var(--kill) 0 10px, #0a0d11 10px 20px);
+    opacity:0.85;
   }
 
-  .app-shell{ display:flex; align-items:flex-start; max-width:1180px; margin:0 auto; padding: 28px 20px 60px; gap:32px; }
-  .app-sidebar{
-    flex: 0 0 200px; position:sticky; top:28px;
-    display:flex; flex-direction:column; gap:4px;
+  /* ---------- benefits row ---------- */
+  .benefits{
+    max-width:1020px; margin:0 auto; padding: 26px 24px 4px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:18px;
   }
-  .app-main{ flex:1 1 auto; min-width:0; }
+  .benefit{ border-left:2px solid var(--kill); padding-left:12px; }
+  .benefit .b-title{ font-family:'Oswald',sans-serif; font-weight:600; font-size:13.5px; color:var(--text); margin-bottom:3px; text-transform:uppercase; letter-spacing:0.3px; }
+  .benefit .b-line{ font-size:12.5px; color:var(--muted); line-height:1.5; }
+  @media (max-width: 760px){
+    .benefits{ grid-template-columns:1fr; }
+    .hero h1{ font-size:28px; }
+  }
 
-  .stepper{ display:flex; flex-direction:column; gap:0; }
-  .step-node{ display:flex; align-items:center; gap:12px; position:relative; cursor:default; padding: 10px 0; }
-  .step-node .dot{ width:26px; height:26px; border-radius:50%; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono', monospace; font-size: 12px; flex-shrink:0; z-index:1; }
-  .step-node .lbl{font-size:13px; color:var(--muted);}
-  .step-node::before{ content:''; position:absolute; left:13px; top:-4px; width:1px; height:18px; background: var(--line); z-index:0; }
+  /* ---------- stepper (horizontal) ---------- */
+  .stepper-wrap{ max-width:1020px; margin:0 auto; padding: 26px 24px 0; }
+  .stepper{ display:flex; }
+  .step-node{ flex:1; text-align:center; position:relative; cursor:default; }
+  .step-node .dot{ width:26px; height:26px; border-radius:2px; transform:rotate(45deg); background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); display:flex; align-items:center; justify-content:center; margin: 0 auto 8px; font-family:'JetBrains Mono', monospace; font-size: 12px; }
+  .step-node .dot span{ transform:rotate(-45deg); display:block; }
+  .step-node .lbl{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;}
+  .step-node::before{ content:''; position:absolute; top:13px; left:-50%; width:100%; height:1px; background: var(--line); z-index:0; }
   .step-node:first-child::before{display:none;}
   .step-node.done .dot{background: rgba(63,191,111,0.15); border-color: var(--ok); color: var(--ok);}
-  .step-node.active .dot{background: rgba(53,194,255,0.15); border-color: var(--cyan); color: var(--cyan);}
+  .step-node.active .dot{background: rgba(255,106,26,0.18); border-color: var(--kill); color: var(--kill-bright);}
   .step-node.active .lbl{color: var(--text); font-weight:600;}
   .step-node.clickable{cursor:pointer;}
 
-  @media (max-width: 860px){
-    .app-shell{ flex-direction:column; gap:18px; }
-    .app-sidebar{ position:static; flex-direction:row; width:100%; overflow-x:auto; gap:4px; }
-    .step-node{ padding:8px 10px 8px 0; }
-    .step-node::before{ display:none; }
+  .wizard{ max-width: 1020px; margin: 24px auto 0; padding: 0 24px 60px; }
+  .panel{
+    background: var(--panel); border: 1px solid var(--line); padding: 22px;
+    clip-path: polygon(0 14px, 14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
   }
-
-  .wizard{ max-width: 960px; }
-  .panel{ background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 22px; }
   .panel.narrow{ max-width: 480px; }
-  .panel h2{font-size: 17px; margin:0 0 6px;}
+  .panel h2{font-size: 17px; margin:0 0 6px; text-transform:uppercase; letter-spacing:0.3px;}
   .panel .sub{color:var(--muted); font-size:13px; margin: 0 0 18px; line-height:1.5;}
 
   .split-layout{ display:flex; gap:26px; align-items:flex-start; }
@@ -91,8 +112,8 @@
   button{ font-family:'Inter',sans-serif; font-weight:600; font-size: 13px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); padding: 10px 16px; cursor:pointer; transition: border-color .15s ease, background .15s ease; }
   button:hover:not(:disabled){border-color:#3a4756;}
   button:disabled{opacity:0.35; cursor:not-allowed;}
-  button.primary{background: var(--cyan-dim); border-color: var(--cyan); color:#fff;}
-  button.primary:hover:not(:disabled){background:#1f6f92;}
+  button.primary{background: linear-gradient(180deg, var(--kill), #E85A0E); border-color: var(--kill); color:#fff; text-transform:uppercase; letter-spacing:0.4px;}
+  button.primary:hover:not(:disabled){background: linear-gradient(180deg, var(--kill-bright), var(--kill));}
   button.ghost{background:transparent;}
   button.small{padding:5px 9px; font-size:11px; margin-right:5px;}
   button.full{width:100%;}
@@ -202,23 +223,40 @@
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">CALLOFDUTY<span>CLIPS</span></div>
-  <h1 class="topbar-h1">Every Call of Duty kill, cut automatically.</h1>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">CALLOFDUTY<span>CLIPS</span></div>
+    <h1>Every <em>Call of Duty</em> kill, cut automatically.</h1>
+    <p class="hero-sub">Upload your Warzone, Black Ops, or Modern Warfare gameplay and get every kill, death, and killing streak cut into its own clip — automatically, in your browser, free. Built for players who want highlights and montages without opening an editor.</p>
+  </div>
+</header>
+<div class="hazard"></div>
+
+<div class="benefits">
+  <div class="benefit">
+    <div class="b-title">Zero editing</div>
+    <div class="b-line">It reads your game's own kill notifications and cuts the clip for you.</div>
+  </div>
+  <div class="benefit">
+    <div class="b-title">Full matches, not guesswork</div>
+    <div class="b-line">Upload the whole recording — lobby, multiple games, all of it. It sorts out what matters.</div>
+  </div>
+  <div class="benefit">
+    <div class="b-title">Ready to post</div>
+    <div class="b-line">Combine your best clips into one download, ready for TikTok, YouTube, or Discord.</div>
+  </div>
 </div>
 
-<div class="app-shell">
-  <aside class="app-sidebar">
-    <nav class="stepper" id="stepper">
-      <div class="step-node" data-step="1"><div class="dot">1</div><div class="lbl">Upload</div></div>
-      <div class="step-node" data-step="2"><div class="dot">2</div><div class="lbl">Setup</div></div>
-      <div class="step-node" data-step="3"><div class="dot">3</div><div class="lbl">Detecting</div></div>
-      <div class="step-node" data-step="4"><div class="dot">4</div><div class="lbl">Your clips</div></div>
-    </nav>
-  </aside>
+<div class="stepper-wrap">
+  <nav class="stepper" id="stepper">
+    <div class="step-node" data-step="1"><div class="dot"><span>1</span></div><div class="lbl">Upload</div></div>
+    <div class="step-node" data-step="2"><div class="dot"><span>2</span></div><div class="lbl">Setup</div></div>
+    <div class="step-node" data-step="3"><div class="dot"><span>3</span></div><div class="lbl">Detecting</div></div>
+    <div class="step-node" data-step="4"><div class="dot"><span>4</span></div><div class="lbl">Your clips</div></div>
+  </nav>
+</div>
 
-  <main class="app-main">
-  <div class="wizard">
+<div class="wizard">
 
   <div class="panel step-panel narrow" id="step1">
     <h2>Upload your recording</h2>
@@ -327,8 +365,6 @@
     </div>
   </div>
 
-</div>
-  </main>
 </div>
 
 <div id="theatreBackdrop"></div>
