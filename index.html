@@ -499,6 +499,33 @@
   });
   let scanDone = false;
   let exporting = false;
+  let activeRecorder = null;
+  let activeExportStatusEl = null;
+  let pausedByVisibility = false;
+  // Recording can't continue while the tab is hidden — the browser freezes the
+  // drawing loop regardless of anything this page does. But it CAN pause the
+  // recorder cleanly the instant that happens and resume exactly where it left
+  // off when you come back, instead of the output ending up with a frozen or
+  // broken stretch from whatever happened while you were away.
+  document.addEventListener('visibilitychange', () => {
+    if (!activeRecorder) return;
+    if (document.hidden){
+      if (activeRecorder.state === 'recording'){
+        try { activeRecorder.pause(); } catch(e){}
+        video.pause();
+        pausedByVisibility = true;
+        if (activeExportStatusEl){
+          activeExportStatusEl.className = 'status-line show';
+          activeExportStatusEl.textContent = 'Paused — this tab went to the background. Come back to this tab to keep going; nothing is lost.';
+        }
+      }
+    } else if (pausedByVisibility){
+      pausedByVisibility = false;
+      try { activeRecorder.resume(); } catch(e){}
+      video.play().catch(()=>{});
+      if (activeExportStatusEl) activeExportStatusEl.textContent = 'Resuming…';
+    }
+  });
   let duration = 0;
   let maxStepReached = 1;
   let lastFile = null;
@@ -1509,6 +1536,8 @@
     const chunks = [];
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
     const recordingDone = new Promise(resolve => { recorder.onstop = resolve; });
+    activeRecorder = recorder;
+    activeExportStatusEl = statusEl;
     let drawing = true;
     function drawLoop(){ if (!drawing) return; ectx.drawImage(video, 0, 0, w, h); requestAnimationFrame(drawLoop); }
     // Anything below here can throw (a rejected play(), a seek that never resolves,
@@ -1569,6 +1598,9 @@
       // video/audio tracks alive was very likely why a second download in the
       // same session could come back empty or fail outright.
       try { combinedStream.getTracks().forEach(t => t.stop()); } catch(e){}
+      activeRecorder = null;
+      activeExportStatusEl = null;
+      pausedByVisibility = false;
       releaseWakeLock();
       setBusy(false);
     }
