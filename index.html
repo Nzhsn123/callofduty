@@ -746,12 +746,18 @@
   function preprocessCanvas(ctx, w, h){
     const imgData = ctx.getImageData(0, 0, w, h);
     const d = imgData.data;
-    const CUTOFF = 150;
+    // Two separate, more forgiving thresholds instead of one high combined bar —
+    // very bright passes regardless of color (catches white/plain text easily,
+    // e.g. "KILLCAM"), OR moderately saturated passes regardless of brightness
+    // (catches colored text like the kill banner even if it renders a bit
+    // darker/less vivid than on desktop, which mobile GPU-accelerated video
+    // decoding plausibly does for the exact same source pixels).
+    const BRIGHT_CUTOFF = 170, SAT_CUTOFF = 80;
     for (let p = 0; p < d.length; p += 4){
       const r = d[p], g = d[p+1], b = d[p+2];
       const maxc = Math.max(r, g, b), minc = Math.min(r, g, b);
       const satPct = maxc > 0 ? ((maxc - minc) * 255) / maxc : 0;
-      const v = Math.max(maxc, satPct) > CUTOFF ? 255 : 0;
+      const v = (maxc > BRIGHT_CUTOFF || satPct > SAT_CUTOFF) ? 255 : 0;
       d[p] = d[p+1] = d[p+2] = v;
     }
     ctx.putImageData(imgData, 0, 0);
