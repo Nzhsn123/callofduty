@@ -303,7 +303,7 @@
 
   <div class="panel step-panel" id="step4" style="display:none;">
     <h2>Your clips</h2>
-    <p class="sub">Preview, select, and download — individually or combined.</p>
+    <p class="sub">Download any clip on its own — or tick the ones you want and combine them into a single video below.</p>
 
     <div class="split-layout">
       <div class="split-video"><div class="stage" id="stage4"></div></div>
@@ -318,12 +318,13 @@
           <button class="small" id="selectNoneBtn">Select none</button>
         </div>
         <table>
-          <thead><tr><th>Include</th><th>Clip</th><th>Range</th><th>Trim</th><th>Events</th><th></th></tr></thead>
+          <thead><tr><th>Combine?</th><th>Clip</th><th>Range</th><th>Trim</th><th>Events</th><th>Download this one</th></tr></thead>
           <tbody id="clipsBody"></tbody>
         </table>
         <div class="empty-state" id="clipsEmpty">Nothing detected yet.</div>
 
-        <div class="btn-row">
+        <p class="hint" style="margin:14px 0 4px;">Ticked clips above get combined into one file here:</p>
+        <div class="btn-row" style="margin-top:0;">
           <button class="primary full" id="exportBtn" disabled>Download compiled video (0 clips)</button>
         </div>
         <div class="progress-wrap"><div class="progress-bar" id="exportProgress"></div></div>
@@ -410,6 +411,16 @@
   const video = document.createElement('video');
   video.id = 'video';
   video.controls = true;
+  video.muted = true;
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+  // Missing playsinline is a well-known iOS Safari trap: without it, Safari can
+  // hand playback off to its own native fullscreen player instead of keeping the
+  // video as a normal in-page element, and canvas frame-grabbing from a video in
+  // that state is unreliable — a very plausible single root cause for both
+  // detection and export failing together on iPhone specifically. Muting is safe
+  // here: it only silences local playback, the audio data itself is untouched and
+  // still comes through fully in exported clips via captureStream().
   const roiOverlay = document.createElement('div');
   roiOverlay.id = 'roiOverlay';
 
