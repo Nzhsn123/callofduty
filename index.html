@@ -325,13 +325,30 @@
     </details>
   </div>
 
-  <div class="panel step-panel narrow" id="step2" style="display:none;">
+  <div class="panel step-panel" id="step2" style="display:none;">
     <h2>Quick setup</h2>
     <p class="sub">Your name is optional — detection doesn't need it.</p>
-    <div class="field">
-      <label>In-game name / gamertag (optional backup signal)</label>
-      <input type="text" id="usernameInput" placeholder="e.g. Ghost_47">
+
+    <div class="split-layout">
+      <div class="split-video"><div class="stage" id="stage2"></div></div>
+      <div class="split-info">
+        <div class="field">
+          <label>In-game name / gamertag (optional backup signal)</label>
+          <input type="text" id="usernameInput" placeholder="e.g. Ghost_47">
+        </div>
+
+        <div class="req-box" style="margin-top:0;">
+          <p class="hint" style="margin-top:0;">
+            Detection reads two specific things on screen: the banner that says <b>"ELIMINATED: PlayerName"</b>, and the <b>"1ST KILL" / "2ND KILL"</b>-style counter shown with it. It already checks the usual spot those appear in for most Call of Duty titles — but if your HUD, a streaming overlay, or a different game puts them somewhere else (like the "ELIMINATED:" banner sitting lower on screen, or off to one side), scrub the video to a moment where you can actually see that banner, then draw a box around <b>just that banner</b> — not the whole HUD, not the minimap, just the "ELIMINATED:" text and the kill counter next to it.
+          </p>
+          <div class="btn-row" style="margin-top:10px;">
+            <button id="drawRoiBtn2">Draw a box around your kill banner</button>
+          </div>
+          <div class="hint" id="roiStatus2"></div>
+        </div>
+      </div>
     </div>
+
     <div class="btn-row">
       <button class="ghost" data-back="1">Back</button>
       <div class="spacer"></div>
@@ -390,9 +407,9 @@
 
     <details class="advanced">
       <summary>Detection missed things or found extras? Adjust it here</summary>
-      <p class="hint">If detection is missing things — different HUD layout, streaming overlay, unusual position — draw a box around wherever your kill notification actually appears, then rescan. Works on its own; your name above is only needed if you're boxing a kill feed instead.</p>
+      <p class="hint">Draw a box around the exact "ELIMINATED: PlayerName" banner and kill counter wherever it actually appears in your footage, then rescan. Works on its own; your name above is only needed if you're boxing a kill feed instead.</p>
       <div class="btn-row" style="margin-top:0;">
-        <button id="drawRoiBtn">Draw a region on the video above</button>
+        <button id="drawRoiBtn">Draw a box on the video above</button>
         <button id="rescanBtn">Rescan now</button>
       </div>
       <div class="hint" id="roiStatus"></div>
@@ -506,8 +523,10 @@
   const eventsBody = document.getElementById('eventsBody');
   const eventsEmpty = document.getElementById('eventsEmpty');
   const drawRoiBtn = document.getElementById('drawRoiBtn');
+  const drawRoiBtn2 = document.getElementById('drawRoiBtn2');
   const rescanBtn = document.getElementById('rescanBtn');
   const roiStatus = document.getElementById('roiStatus');
+  const roiStatus2 = document.getElementById('roiStatus2');
   const frameCanvas = document.getElementById('frameCanvas');
   const roiCanvas = document.getElementById('roiCanvas');
   const exportCanvas = document.getElementById('exportCanvas');
@@ -609,6 +628,7 @@
       node.classList.toggle('done', s < n);
       node.classList.toggle('clickable', s <= maxStepReached);
     });
+    if (n === 2){ moveVideoTo('stage2'); }
     if (n === 3){ moveVideoTo('stage3'); if (!scanning && !scanDone) startScan().catch(err => console.error('[FRAGCUT DIAG] Unexpected error escaped startScan:', err)); }
     if (n === 4){ moveVideoTo('stage4'); renderGameTabs(); renderClips(); }
     window.scrollTo({top:0, behavior:'smooth'});
@@ -702,11 +722,15 @@
 
   // ---------- optional region override ----------
   let dragging = false, dragStart = null;
-  drawRoiBtn.addEventListener('click', () => {
-    moveVideoTo('stage4');
+  let activeRoiStage = 'stage4', activeRoiBtn = drawRoiBtn;
+  function activateRoiDrawing(stageId, btnEl, idleLabel){
+    activeRoiStage = stageId; activeRoiBtn = btnEl;
+    moveVideoTo(stageId);
     roiOverlay.classList.add('roi-active');
-    drawRoiBtn.textContent = 'Drag on the video above now…';
-  });
+    btnEl.textContent = 'Drag on the video above now…';
+  }
+  drawRoiBtn.addEventListener('click', () => activateRoiDrawing('stage4', drawRoiBtn));
+  drawRoiBtn2.addEventListener('click', () => activateRoiDrawing('stage2', drawRoiBtn2));
   roiOverlay.addEventListener('mousedown', (e) => {
     const rect = roiOverlay.getBoundingClientRect();
     dragging = true; dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -721,16 +745,19 @@
     if (!dragging) return;
     dragging = false;
     roiOverlay.classList.remove('roi-active');
-    drawRoiBtn.textContent = 'Draw a region on the video above';
+    const idleLabel = activeRoiBtn === drawRoiBtn2 ? 'Draw a box around your kill banner' : 'Draw a region on the video above';
+    activeRoiBtn.textContent = idleLabel;
     const rect = roiOverlay.getBoundingClientRect();
     const x = e.clientX - rect.left, y = e.clientY - rect.top;
     const x0 = Math.max(0, Math.min(dragStart.x, x)), y0 = Math.max(0, Math.min(dragStart.y, y));
     const x1 = Math.min(rect.width, Math.max(dragStart.x, x)), y1 = Math.min(rect.height, Math.max(dragStart.y, y));
     if (x1 - x0 < 10 || y1 - y0 < 10){ clearRoiBoxEl(); return; }
     customRoi = { x: x0/rect.width, y: y0/rect.height, w: (x1-x0)/rect.width, h: (y1-y0)/rect.height };
-    roiStatus.textContent = usernameInput.value.trim()
-      ? 'Custom region set. Click "Rescan now" to include it — checked for kill notifications, and also for your name in a kill feed.'
-      : 'Custom region set. Click "Rescan now" to include it — add your name above too if this region is a kill feed rather than a kill notification banner.';
+    const msg = usernameInput.value.trim()
+      ? 'Region set — it\'ll be checked for the "ELIMINATED"/kill-counter text, and also for your name if it shows up in a kill feed. Detection will use this once you start it.'
+      : 'Region set — it\'ll be checked for the "ELIMINATED"/kill-counter text. Add your name above too if this box is a kill feed rather than the kill banner itself.';
+    roiStatus.textContent = msg;
+    roiStatus2.textContent = msg;
   });
   function clearRoiBoxEl(){ roiOverlay.querySelectorAll('.roi-box').forEach(n => n.remove()); }
   function drawRoiBoxEl(x0,y0,x1,y1){
