@@ -1094,13 +1094,26 @@
   // counting, rather than trusting the raw detection total or the OCR'd ordinal
   // number (which can itself misread a digit).
   function countDistinctKills(evs){
+    // Time-proximity alone can't tell "the same kill read twice" apart from
+    // "two real kills that happened close together" — confirmed directly
+    // against real footage: a 2.5s window was merging genuinely separate kills
+    // (different victim names) into one. Tightened the window since it only
+    // needs to catch the same banner being read on consecutive ~0.5s samples,
+    // not cover a multi-second gap.
     const times = evs.map(e => e.time).sort((a,b)=>a-b);
-    let count = 0, lastT = null;
+    let timeCount = 0, lastT = null;
     times.forEach(t => {
-      if (lastT === null || t - lastT > 2.5) count++;
+      if (lastT === null || t - lastT > 1.2) timeCount++;
       lastT = t;
     });
-    return count;
+    // The game already numbers each kill in a life (1ST KILL, 2ND KILL, ...) —
+    // when that's readable at all, it's ground truth and doesn't depend on
+    // timing guesses. Take whichever signal gives the higher (more complete)
+    // count, since undercounting real kills is the failure mode that matters
+    // here, not the reverse.
+    const ordinals = evs.map(e => e.ordinal).filter(o => o != null);
+    const maxOrdinal = ordinals.length ? Math.max(...ordinals) : 0;
+    return Math.max(timeCount, maxOrdinal);
   }
 
   function clusterAndPad(evs, gap, pad, type, idPrefix, gameIndex){
