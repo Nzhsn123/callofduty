@@ -170,6 +170,19 @@
   .status-line.err{border-color:#E8384F; color:#ffb3bd;}
   .status-line.ok{border-color:var(--ok); color:#a9e8bd;}
 
+  .req-box{
+    margin-top:18px; padding:14px 16px; background:var(--panel-2);
+    border:1px solid var(--line); border-left:2px solid var(--kill); border-radius:4px;
+  }
+  .req-box summary{ cursor:pointer; font-size:12.5px; font-weight:600; color:var(--text); list-style:none; display:flex; align-items:center; gap:6px; }
+  .req-box summary::-webkit-details-marker{ display:none; }
+  .req-box summary::before{ content:'▸'; color:var(--kill); transition:transform .15s ease; }
+  .req-box[open] summary::before{ transform:rotate(90deg); }
+  .req-table{ margin-top:12px; display:grid; grid-template-columns:auto 1fr; gap:8px 16px; font-size:12px; }
+  .req-table dt{ color:var(--muted); font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+  .req-table dd{ margin:0; color:var(--text); line-height:1.5; }
+  .req-table dd b{ color:var(--kill-bright); }
+
   .row-status{font-size:11px; color:var(--muted); margin-top:4px; max-width:150px; min-height:0;}
   .row-status.err{color:#ffb3bd;}
   .row-status.ok a{color:var(--kill-bright); font-weight:600; text-decoration:none; border-bottom:1px solid var(--kill-bright);}
@@ -252,7 +265,7 @@
     <div class="brand">CALLOFDUTY<span>CLIPS</span></div>
     <h1>Every <em>Call of Duty</em> kill, cut automatically.</h1>
     <p class="hero-sub">Upload your Warzone, Black Ops, or Modern Warfare gameplay and get every kill, death, and killing streak cut into its own clip — automatically, in your browser, free. Built for players who want highlights and montages without opening an editor.</p>
-    <div class="platform-notice"><b>Desktop/laptop only</b> — mobile browsers don't reliably support the video processing this needs. Keep this tab open and active while detecting or downloading; switching away pauses the work until you come back.</div>
+    <div class="platform-notice"><b>Works on desktop and mobile</b> — desktop is the most reliable. See the upload requirements below for the format/size that works best, especially on phones.</div>
   </div>
 </header>
 <div class="hazard"></div>
@@ -292,6 +305,24 @@
     </div>
     <div class="status-line" id="loadStatus"></div>
     <div class="hint" id="serverStatus"></div>
+
+    <details class="req-box" open>
+      <summary>Upload requirements — read this first</summary>
+      <dl class="req-table">
+        <dt>Format</dt>
+        <dd><b>.mp4 (H.264)</b> works best and loads everywhere. Avoid HEVC/H.265 .mov files if you can (the default on some iPhone recordings) — plays fine on Safari, but often fails to load at all on desktop Chrome/Firefox.</dd>
+        <dt>Resolution</dt>
+        <dd><b>1080p is the sweet spot.</b> Detection only reads a small cropped region of the frame, so 1440p/4K adds real processing time and memory risk without improving accuracy — if your device lets you choose a recording quality, pick 1080p.</dd>
+        <dt>Aspect ratio</dt>
+        <dd>Standard landscape (16:9). Portrait or ultrawide recordings aren't reliably supported — the detection zones assume a normal landscape gameplay HUD.</dd>
+        <dt>Length</dt>
+        <dd>No hard limit, but shorter uploads scan faster and use less memory. Trim to just the match(es) you want first if you can, especially on mobile.</dd>
+        <dt>On mobile</dt>
+        <dd>Works, but screen recordings can be hit-or-miss — high-resolution or very long recordings are the most likely to run into memory limits on a phone. 1080p and a trimmed-down clip are noticeably more reliable than a long 4K recording straight off the device.</dd>
+        <dt>While it runs</dt>
+        <dd>Keep this tab open and on screen during detection and downloading — switching away pauses the work until you come back (this applies on both desktop and mobile).</dd>
+      </dl>
+    </details>
   </div>
 
   <div class="panel step-panel narrow" id="step2" style="display:none;">
