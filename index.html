@@ -555,8 +555,10 @@
   let maxStepReached = 1;
   let lastFile = null;
   let triedServerConvert = false;
+  let hasConversionServer = false; // set true only if /health actually responds
 
   fetch('/health').then(r => r.json()).then(j => {
+    hasConversionServer = true;
     if (!j.ffmpeg) serverStatus.textContent = 'The server is running, but ffmpeg isn\'t installed on it — automatic conversion of unsupported formats won\'t work until it is.';
   }).catch(() => {
     serverStatus.textContent = 'Note: no conversion server detected behind this page — files your browser can already play (most .mp4/.webm) will still work fine.';
@@ -576,7 +578,7 @@
       node.classList.toggle('done', s < n);
       node.classList.toggle('clickable', s <= maxStepReached);
     });
-    if (n === 3){ moveVideoTo('stage3'); if (!scanning && !scanDone) startScan(); }
+    if (n === 3){ moveVideoTo('stage3'); if (!scanning && !scanDone) startScan().catch(err => console.error('[FRAGCUT DIAG] Unexpected error escaped startScan:', err)); }
     if (n === 4){ moveVideoTo('stage4'); renderGameTabs(); renderClips(); }
     window.scrollTo({top:0, behavior:'smooth'});
   }
@@ -606,9 +608,34 @@
     video.load();
   });
   video.addEventListener('error', () => {
-    if (lastFile && !triedServerConvert){ triedServerConvert = true; convertOnServer(lastFile); return; }
+    const mediaErr = video.error;
+    const codeNames = { 1:'MEDIA_ERR_ABORTED', 2:'MEDIA_ERR_NETWORK', 3:'MEDIA_ERR_DECODE', 4:'MEDIA_ERR_SRC_NOT_SUPPORTED' };
+    const codeName = mediaErr ? (codeNames[mediaErr.code] || ('code ' + mediaErr.code)) : 'unknown';
+    console.error('[FRAGCUT DIAG] video load failed:', {
+      file: lastFile ? { name: lastFile.name, type: lastFile.type, size: lastFile.size } : null,
+      mediaErrorCode: mediaErr ? mediaErr.code : null,
+      mediaErrorName: codeName,
+      mediaErrorMessage: mediaErr ? mediaErr.message : null,
+      ua: navigator.userAgent
+    });
+    // Only worth trying the conversion server if we actually confirmed one exists
+    // (via /health at page load) — on the live GitHub Pages deployment there is
+    // no server at all, so this was unconditionally attempting a doomed request
+    // and showing a confusing "conversion" message that had nothing to do with
+    // the real problem, which is this specific file's format/codec.
+    if (lastFile && !triedServerConvert && hasConversionServer){
+      triedServerConvert = true;
+      convertOnServer(lastFile);
+      return;
+    }
     loadStatus.className = 'status-line show err';
-    loadStatus.textContent = 'This file still would not load, even after attempting conversion. Try a different file, or check the server\'s terminal output for details.';
+    if (mediaErr && mediaErr.code === 4){
+      loadStatus.textContent = `This browser can't play this file's format/codec (${lastFile ? lastFile.type || lastFile.name : 'file'}). Screen recordings in particular sometimes use a codec variant the browser won't decode inline — try re-exporting/trimming it to a standard .mp4 (H.264) first, e.g. with a quick pass through iMovie, HandBrake, or your phone's built-in video editor, then upload that.`;
+    } else if (mediaErr && mediaErr.code === 3){
+      loadStatus.textContent = `This file failed to decode (${codeName}) — it may be corrupted, or not fully downloaded yet if it's stored in iCloud/cloud storage rather than saved locally on this device. Try opening it in your Photos/Files app first to force a full local download, then upload again.`;
+    } else {
+      loadStatus.textContent = `This file would not load (${codeName}${mediaErr && mediaErr.message ? ': ' + mediaErr.message : ''}). Try a different file, or a standard .mp4 export of it.`;
+    }
   });
   async function convertOnServer(file){
     loadStatus.className = 'status-line show';
@@ -690,6 +717,37 @@
     const m = Math.floor(t/60), s = (t%60).toFixed(1).padStart(4,'0');
     return m + ':' + s;
   }
+  // ---------- mobile diagnostics ----------
+  // A canvas read that throws (iOS Safari has a real, documented size limit on
+  // getImageData — not just "slow", it errors outright above a certain size)
+  // was previously unguarded anywhere in this file. If it threw on the very
+  // first frame, the entire scan died silently with nothing shown to the user.
+  // This makes that failure loud and diagnosable instead.
+  class CanvasReadError extends Error {
+    constructor(message, diag){ super(message); this.name = 'CanvasReadError'; this.diag = diag; }
+  }
+  function diagSnapshot(label, w, h, extra){
+    return Object.assign({
+      label, isMobile, ua: navigator.userAgent,
+      videoW: video.videoWidth, videoH: video.videoHeight,
+      canvasW: w, canvasH: h, pixels: w*h,
+      videoTime: video.currentTime
+    }, extra || {});
+  }
+  function safeGetImageData(ctx, w, h, label){
+    try {
+      const d = ctx.getImageData(0, 0, w, h);
+      return d;
+    } catch (err) {
+      const diag = diagSnapshot(label, w, h, { errorName: err.name, errorMessage: err.message });
+      console.error('[FRAGCUT DIAG] getImageData FAILED:', diag);
+      throw new CanvasReadError(
+        `Canvas read failed during ${label} (${w}×${h} = ${(w*h).toLocaleString()}px): ${err.name}: ${err.message}`,
+        diag
+      );
+    }
+  }
+
   function waitSeeked(){
     return new Promise(resolve => {
       let done = false;
@@ -733,7 +791,7 @@
   let lastFramePixelSum = null;
   function pixelSum(ctx, w, h){
     const sw = Math.min(w, 40), sh = Math.min(h, 40);
-    const d = ctx.getImageData(0, 0, sw, sh).data;
+    const d = safeGetImageData(ctx, sw, sh, 'pixelSum').data;
     let sum = 0;
     for (let i = 0; i < d.length; i += 8) sum += d[i];
     return sum;
@@ -751,7 +809,7 @@
     lastFramePixelSum = sum;
   }
   function preprocessCanvas(ctx, w, h){
-    const imgData = ctx.getImageData(0, 0, w, h);
+    const imgData = safeGetImageData(ctx, w, h, 'preprocessCanvas');
     const d = imgData.data;
     // Two separate, more forgiving thresholds instead of one high combined bar —
     // very bright passes regardless of color (catches white/plain text easily,
@@ -775,7 +833,7 @@
   // actual digit in noise. This isolates bright + LOW-saturation pixels specifically,
   // which rejects vivid skin colors while still catching the white number.
   function preprocessWhiteText(ctx, w, h){
-    const imgData = ctx.getImageData(0, 0, w, h);
+    const imgData = safeGetImageData(ctx, w, h, 'preprocessWhiteText');
     const d = imgData.data;
     for (let p = 0; p < d.length; p += 4){
       const r = d[p], g = d[p+1], b = d[p+2];
@@ -826,12 +884,29 @@
     events.push({ id: eventIdSeq++, time, type, source, text, gameIndex, ordinal });
   }
 
+  // Instead of blindly multiplying a crop by a fixed factor (which, for a
+  // high-resolution source video, can produce a genuinely huge canvas), pick
+  // the largest scale that keeps total pixels under a safety budget. iOS
+  // Safari has a documented, real limit where getImageData() throws outright
+  // above a certain canvas size — not just "gets slow". Desktop gets an
+  // effectively unbounded budget so this never changes existing behavior there.
+  const MOBILE_PIXEL_BUDGET = 1300000;   // conservative margin under the ~2M-pixel failure point found in research
+  const DESKTOP_PIXEL_BUDGET = 20000000; // sanity ceiling only — no realistic crop hits this
+  function safeScale(cropW, cropH, desiredScale){
+    const budget = isMobile ? MOBILE_PIXEL_BUDGET : DESKTOP_PIXEL_BUDGET;
+    const desiredPixels = cropW * desiredScale * cropH * desiredScale;
+    if (desiredPixels <= budget) return desiredScale;
+    const capped = Math.max(1, Math.sqrt(budget / (cropW * cropH)));
+    console.log(`[FRAGCUT DIAG] scale capped: wanted ${desiredScale}x on ${cropW}x${cropH} crop (${(desiredPixels).toLocaleString()}px) — using ${capped.toFixed(2)}x instead to stay under ${budget.toLocaleString()}px budget`);
+    return capped;
+  }
+
   // ---------- Phase 1: find every stretch of real gameplay (splits into separate games) ----------
   async function findGameplaySegments(worker, naturalW, naturalH){
     const ax = Math.round(AMMO_BAND.x * naturalW), ay = Math.round(AMMO_BAND.y * naturalH);
     const aw = Math.round(AMMO_BAND.w * naturalW), ah = Math.round(AMMO_BAND.h * naturalH);
-    const SCALE = 3;
-    roiCanvas.width = aw * SCALE; roiCanvas.height = ah * SCALE;
+    const SCALE = safeScale(aw, ah, 3);
+    roiCanvas.width = Math.round(aw * SCALE); roiCanvas.height = Math.round(ah * SCALE);
     const rctx = roiCanvas.getContext('2d');
     const coarseInterval = Math.max(2, Math.round(duration / 320));
     const total = Math.ceil(duration / coarseInterval);
@@ -909,8 +984,8 @@
     if (!deathTimes.length) return;
     const ax = Math.round(AMMO_BAND.x*naturalW), ay = Math.round(AMMO_BAND.y*naturalH);
     const aw = Math.round(AMMO_BAND.w*naturalW), ah = Math.round(AMMO_BAND.h*naturalH);
-    const SCALE = 3;
-    roiCanvas.width = aw*SCALE; roiCanvas.height = ah*SCALE;
+    const SCALE = safeScale(aw, ah, 3);
+    roiCanvas.width = Math.round(aw*SCALE); roiCanvas.height = Math.round(ah*SCALE);
     const rctx = roiCanvas.getContext('2d');
     const FORWARD_WINDOW = 12, STEP = 1;
     for (let i = 0; i < deathTimes.length; i++){
@@ -967,15 +1042,22 @@
     // there's no memory reason to downscale, and full detail matters for the
     // small "ELIMINATED:" text, which is marginal to read even at full size.
     const naturalW = video.videoWidth, naturalH = video.videoHeight;
+    console.log(`[FRAGCUT DIAG] Starting scan | UA: ${navigator.userAgent} | isMobile: ${isMobile} | video: ${naturalW}×${naturalH}, ${duration.toFixed(1)}s`);
 
-    detectBigStatus.textContent = 'Finding every stretch of gameplay…';
-    const segments = await findGameplaySegments(worker, naturalW, naturalH);
-    games = segments.map((seg, i) => ({ index: i, start: seg.start, end: seg.end }));
-    detectSmallStatus.textContent = games.length > 1
-      ? `Found ${games.length} separate matches.`
-      : `Gameplay window: ${fmtTime(segments[0].start)} – ${fmtTime(segments[0].end)}`;
+    // Everything below can hit a canvas read that fails outright on some
+    // devices (see safeGetImageData). Previously nothing caught that — it
+    // would kill the scan silently with zero events and no explanation ever
+    // shown. Now it's caught specifically, stops the scan cleanly, and shows
+    // exactly what failed instead of quietly producing "0 kills found".
+    try {
+      detectBigStatus.textContent = 'Finding every stretch of gameplay…';
+      const segments = await findGameplaySegments(worker, naturalW, naturalH);
+      games = segments.map((seg, i) => ({ index: i, start: seg.start, end: seg.end }));
+      detectSmallStatus.textContent = games.length > 1
+        ? `Found ${games.length} separate matches.`
+        : `Gameplay window: ${fmtTime(segments[0].start)} – ${fmtTime(segments[0].end)}`;
 
-    const uname = usernameInput.value.trim().toLowerCase();
+      const uname = usernameInput.value.trim().toLowerCase();
     const tx = Math.round(TOP_BAND.x*naturalW), ty = Math.round(TOP_BAND.y*naturalH);
     const tw = Math.round(TOP_BAND.w*naturalW), th = Math.round(TOP_BAND.h*naturalH);
     const bx = Math.round(BOT_BAND.x*naturalW), by = Math.round(BOT_BAND.y*naturalH);
@@ -989,12 +1071,17 @@
     // Upscaled more than the ammo-digit checks elsewhere — this is the small,
     // often-colored "ELIMINATED:" text, which has proven noticeably harder to
     // read reliably than the big plain "KILLCAM" text, especially on mobile.
-    // More pixels per letter gives Tesseract a real chance at it.
-    const SCALE = isMobile ? 5 : 4;
+    // More pixels per letter gives Tesseract a real chance at it — but capped
+    // by a pixel budget (see safeScale) rather than blindly multiplied, since
+    // that blind multiply is what was very likely producing a canvas large
+    // enough to make getImageData() throw outright on iOS Safari.
+    const desiredScale = isMobile ? 5 : 4;
     const stripW = Math.max(tw, bw, cw);
     const stackedH = th + bh + (useCustom ? ch : 0);
-    roiCanvas.width = stripW * SCALE; roiCanvas.height = stackedH * SCALE;
+    const SCALE = safeScale(stripW, stackedH, desiredScale);
+    roiCanvas.width = Math.round(stripW * SCALE); roiCanvas.height = Math.round(stackedH * SCALE);
     const rctx = roiCanvas.getContext('2d');
+    console.log(`[FRAGCUT DIAG] Kill-scan OCR canvas: source video ${naturalW}×${naturalH} | crop ${stripW}×${stackedH} | scale ${SCALE.toFixed(2)}x | canvas ${roiCanvas.width}×${roiCanvas.height} = ${(roiCanvas.width*roiCanvas.height).toLocaleString()}px | mobile=${isMobile}`);
 
     video.pause();
     const interval = isMobile ? 1 : 0.5; // coarser on mobile to offset the slower per-frame wait above
@@ -1009,10 +1096,10 @@
         await waitSeeked();
         await drawVerifiedFrame(() => {
           rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
-          rctx.drawImage(video, tx, ty, tw, th, 0, 0, tw*SCALE, th*SCALE);
-          rctx.drawImage(video, bx, by, bw, bh, 0, th*SCALE, bw*SCALE, bh*SCALE);
+          rctx.drawImage(video, tx, ty, tw, th, 0, 0, Math.round(tw*SCALE), Math.round(th*SCALE));
+          rctx.drawImage(video, bx, by, bw, bh, 0, Math.round(th*SCALE), Math.round(bw*SCALE), Math.round(bh*SCALE));
           if (useCustom){
-            rctx.drawImage(video, cx, cy, cw, ch, 0, (th+bh)*SCALE, cw*SCALE, ch*SCALE);
+            rctx.drawImage(video, cx, cy, cw, ch, 0, Math.round((th+bh)*SCALE), Math.round(cw*SCALE), Math.round(ch*SCALE));
           }
         }, rctx, roiCanvas.width, roiCanvas.height);
         preprocessCanvas(rctx, roiCanvas.width, roiCanvas.height);
@@ -1083,16 +1170,32 @@
     renderEvents();
     rebuildClips();
     setTimeout(() => showStep(4), 600);
+    } catch (err) {
+      // Any failure in the three detection phases lands here — most importantly
+      // a canvas read that threw outright, which previously died silently with
+      // nothing shown. Stop cleanly, log full diagnostics, and tell the user
+      // plainly what happened instead of leaving them looking at "0 kills found".
+      scanning = false;
+      releaseWakeLock();
+      try { await worker.terminate(); } catch(e2){}
+      const isCanvasErr = err instanceof CanvasReadError;
+      console.error('[FRAGCUT DIAG] Scan aborted:', isCanvasErr ? err.diag : { name: err.name, message: err.message, stack: err.stack });
+      scanStatus.className = 'status-line show err';
+      scanStatus.textContent = isCanvasErr
+        ? `Detection stopped: ${err.message}. This looks like a canvas-size limit on this device/browser, not a settings problem — try a shorter recording, or use a desktop browser for now.`
+        : `Detection stopped unexpectedly (${err.name || 'Error'}: ${err.message || 'unknown error'}). Try again — if it keeps happening, a desktop browser will work reliably in the meantime.`;
+      detectBigStatus.textContent = 'Stopped.';
+      detectSmallStatus.textContent = '';
+      scanDone = false;
+      renderEvents();
+      rebuildClips();
+      setTimeout(() => showStep(4), 600);
+    }
   }
 
   // ---------- clip building ----------
   regroupBtn.addEventListener('click', rebuildClips);
 
-  // A single real kill shows both a "2ND KILL" line and an "ELIMINATED:" line in
-  // the same frame — both were being logged as separate events, roughly doubling
-  // the count. Cluster raw kill detections within a couple seconds into one before
-  // counting, rather than trusting the raw detection total or the OCR'd ordinal
-  // number (which can itself misread a digit).
   function countDistinctKills(evs){
     // Time-proximity alone can't tell "the same kill read twice" apart from
     // "two real kills that happened close together" — confirmed directly
