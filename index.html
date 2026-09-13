@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FRAGCUT — Kill Clip Builder</title>
+<title>CallOfDutyClips — Automatic Call of Duty Kill Clips</title>
+<meta name="description" content="Upload your Call of Duty gameplay recording and automatically get clips of every kill and killing streak. Free, runs in your browser, no editing required.">
+<meta name="keywords" content="Call of Duty clips, COD kill clips, Call of Duty highlight generator, automatic gameplay clips, Black Ops clips, Warzone clips, COD montage maker">
+<meta property="og:title" content="CallOfDutyClips — Automatic Call of Duty Kill Clips">
+<meta property="og:description" content="Upload your Call of Duty gameplay and get every kill cut into its own clip automatically.">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -217,9 +222,9 @@
 
 <header class="hero">
   <div class="hero-inner">
-    <div class="brand">FRAG<span>CUT</span></div>
-    <h1>Every kill in your match, cut automatically.</h1>
-    <p class="hero-sub">Upload a full recording, start to finish. FRAGCUT reads the kill notifications your game already shows you, pulls each one into its own clip, and lets you combine any you pick into one highlight reel — no scrubbing, no manual editing.</p>
+    <div class="brand">CALLOFDUTY<span>CLIPS</span></div>
+    <h1>Every Call of Duty kill, cut automatically.</h1>
+    <p class="hero-sub">Upload your gameplay. It finds every kill and cuts the clips — no editing.</p>
 
     <div class="timeline-viz">
       <div class="timeline-track">
@@ -238,9 +243,9 @@
 
     <div class="process-row">
       <span>Upload</span><span class="sep">→</span>
-      <span>Detect every kill</span><span class="sep">→</span>
-      <span>Pick your favorites</span><span class="sep">→</span>
-      <span>Combine &amp; download</span>
+      <span>Detect</span><span class="sep">→</span>
+      <span>Select</span><span class="sep">→</span>
+      <span>Download</span>
     </div>
   </div>
 </header>
@@ -255,8 +260,8 @@
 <div class="wizard">
 
   <div class="panel step-panel" id="step1">
-    <h2>Load your match recording</h2>
-    <p class="sub">One upload can contain multiple matches, lobby time, loadouts — it figures out where each game actually is on its own. If your browser can already play the file (most .mp4/.webm) it loads immediately; other formats convert automatically only if the FRAGCUT server is running behind this page.</p>
+    <h2>Upload your recording</h2>
+    <p class="sub">Multiple matches or one, lobby time included — it sorts that out on its own.</p>
     <div class="field">
       <label>Recording</label>
       <input type="file" id="fileInput" accept="video/*">
@@ -267,7 +272,7 @@
 
   <div class="panel step-panel" id="step2" style="display:none;">
     <h2>Quick setup</h2>
-    <p class="sub">Detection reads the on-screen "ELIMINATED" / "KILLCAM" notifications the game itself shows you, so it works without your name. Enter it anyway if you'd like it used as a backup signal against the kill feed too.</p>
+    <p class="sub">Your name is optional — detection doesn't need it.</p>
     <div class="field">
       <label>In-game name / gamertag (optional backup signal)</label>
       <input type="text" id="usernameInput" placeholder="e.g. Ghost_47">
@@ -280,8 +285,7 @@
   </div>
 
   <div class="panel step-panel" id="step3" style="display:none;">
-    <h2 id="detectTitle">Finding your moments…</h2>
-    <p class="sub">First it finds every stretch of actual gameplay in the recording (skipping menus, loadouts, scoreboards — and separating out multiple matches if there are any), then reads the kill notifications across just those parts.</p>
+    <h2 id="detectTitle">Finding your kills…</h2>
     <div class="stage" id="stage3"></div>
     <div class="detect-center">
       <div class="big-status" id="detectBigStatus">Starting…</div>
@@ -296,14 +300,14 @@
 
   <div class="panel step-panel" id="step4" style="display:none;">
     <h2>Your clips</h2>
-    <p class="sub">Each clip runs from the moment you respawn to your last kill in that life — no death footage, no killcam. Hover "Preview" for a quick look, tick the ones you want, then download individually or as one compiled video.</p>
+    <p class="sub">Preview, select, and download — individually or combined.</p>
 
     <div class="stage" id="stage4"></div>
 
     <div class="tabs" id="gameTabs" style="display:none;"></div>
     <div class="tabs" id="resultTabs">
       <button class="active" data-tab="kill" id="tabKill">Kills</button>
-      <button data-tab="streak" id="tabStreak">Killing streaks (3+)</button>
+      <button data-tab="streak" id="tabStreak">Killing streaks (2+)</button>
     </div>
     <div class="btn-row" style="margin-top:0; margin-bottom:10px;">
       <button class="small" id="selectAllBtn">Select all</button>
@@ -323,7 +327,7 @@
 
     <details class="advanced">
       <summary>Detection missed things or found extras? Adjust it here</summary>
-      <p class="hint">Detection reads two fixed on-screen zones (the kill banner near the crosshair, and the KILLCAM text) plus, if you entered a name, the kill feed in its usual spot. If your HUD is scaled or positioned unusually, point at the kill feed yourself as an extra signal and rescan.</p>
+      <p class="hint">Point at your kill feed and rescan if the default zones aren't lining up.</p>
       <div class="btn-row" style="margin-top:0;">
         <button id="drawRoiBtn">Draw kill-feed region on the video above</button>
         <button id="rescanBtn">Rescan now</button>
@@ -442,7 +446,7 @@
   let activeTab = 'kill';
   let activeGame = 'all';
   let games = []; // [{index, start, end}]
-  const STREAK_MIN = 3;
+  const STREAK_MIN = 2;
 
   const TOP_BAND = { x: 0.40, y: 0.02, w: 0.20, h: 0.11 };   // "KILLCAM"
   const BOT_BAND = { x: 0.34, y: 0.72, w: 0.32, h: 0.16 };   // "ELIMINATED:" / "1ST/2ND KILL"
@@ -453,6 +457,21 @@
 
   let eventIdSeq = 1;
   let scanning = false;
+  let wakeLock = null;
+  async function acquireWakeLock(){
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }
+    catch (e) { /* not supported, or denied — non-fatal, scan still runs */ }
+  }
+  function releaseWakeLock(){
+    try { if (wakeLock){ wakeLock.release(); wakeLock = null; } } catch(e){}
+  }
+  // A wake lock is auto-released the instant the tab goes to the background —
+  // this can't be prevented (the browser suspends video/canvas work there
+  // regardless), but re-grab it the moment you come back so a phone screen
+  // that only briefly dimmed doesn't stay unlocked for the rest of a long scan.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && (scanning || exporting) && !wakeLock) acquireWakeLock();
+  });
   let scanDone = false;
   let exporting = false;
   let duration = 0;
@@ -619,6 +638,33 @@
       setTimeout(finish, 3000);
     });
   }
+
+  // Neither of the signals above turned out fully trustworthy on iOS Safari —
+  // both can resolve before the video has actually produced a new decoded
+  // frame at the sought position, silently handing back stale or repeated
+  // content instead. This checks the actual pixels instead of trusting any
+  // timing event: draw, compare to the last frame we captured, and if nothing
+  // really changed, wait a beat and draw again for real before moving on.
+  let lastFramePixelSum = null;
+  function pixelSum(ctx, w, h){
+    const sw = Math.min(w, 40), sh = Math.min(h, 40);
+    const d = ctx.getImageData(0, 0, sw, sh).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 8) sum += d[i];
+    return sum;
+  }
+  async function drawVerifiedFrame(drawFn, ctx, w, h){
+    drawFn();
+    let sum = pixelSum(ctx, w, h);
+    let attempts = 0;
+    while (sum === lastFramePixelSum && attempts < 8){
+      await new Promise(r => setTimeout(r, 70));
+      drawFn();
+      sum = pixelSum(ctx, w, h);
+      attempts++;
+    }
+    lastFramePixelSum = sum;
+  }
   function preprocessCanvas(ctx, w, h){
     const imgData = ctx.getImageData(0, 0, w, h);
     const d = imgData.data;
@@ -696,7 +742,7 @@
     const SCALE = 3;
     roiCanvas.width = aw * SCALE; roiCanvas.height = ah * SCALE;
     const rctx = roiCanvas.getContext('2d');
-    const coarseInterval = Math.max(2, Math.round(duration / 250));
+    const coarseInterval = Math.max(2, Math.round(duration / 320));
     const total = Math.ceil(duration / coarseInterval);
     let done = 0;
     const hits = [];
@@ -744,6 +790,23 @@
       }
     }
     if (segStart !== null) segments.push({ start: segStart, end: Math.min(duration, lastT + coarseInterval) });
+    // Refine each start backward. The strict cluster check above is only needed
+    // to get *confident* that real gameplay is happening somewhere nearby — once
+    // that's established, a single hit just before it is far more likely to be
+    // genuine than noise, not another isolated lobby blip. Without this, the
+    // segment start was landing later than the actual match start, which could
+    // cut off real early kills before the scan even reached them.
+    const MAX_BACK_MISS = 3;
+    segments.forEach(seg => {
+      let idx = hits.findIndex(h => h.t === seg.start);
+      if (idx <= 0) return;
+      let missStreak = 0, newStart = seg.start;
+      for (let j = idx - 1; j >= 0; j--){
+        if (hits[j].hit){ newStart = hits[j].t; missStreak = 0; }
+        else { missStreak++; if (missStreak > MAX_BACK_MISS) break; }
+      }
+      seg.start = newStart;
+    });
     if (!segments.length) return [{ start: 0, end: duration }];
     return segments;
   }
@@ -786,6 +849,7 @@
     scanning = true; scanDone = false;
     events = []; games = []; respawnMap = {};
     ocrAttempts = 0; ocrFailures = 0;
+    await acquireWakeLock();
     detectBigStatus.textContent = 'Loading the reader…';
     detectSmallStatus.textContent = '';
     scanStatus.className = 'status-line';
@@ -797,6 +861,7 @@
     }
     catch (err){
       scanning = false;
+      releaseWakeLock();
       scanStatus.className = 'status-line show err';
       scanStatus.textContent = 'Could not load the detection engine (offline or blocked). Try again, or check your connection.';
       return;
@@ -892,6 +957,7 @@
 
     await worker.terminate();
     scanning = false; scanDone = true;
+    releaseWakeLock();
     detectBigStatus.textContent = 'Done.';
     detectSmallStatus.textContent = `${events.length} moment${events.length===1?'':'s'} found. Building clips…`;
     const failureRate = ocrAttempts > 20 ? ocrFailures / ocrAttempts : 0;
@@ -1297,7 +1363,7 @@
     clipsEmpty.style.display = list.length ? 'none' : 'block';
     if (!list.length){
       clipsEmpty.textContent = activeTab === 'streak'
-        ? 'No 3+ kill lives found here.'
+        ? 'No 2+ kill lives found here.'
         : 'Nothing detected yet.';
     }
     list.forEach((c, idx) => {
@@ -1350,9 +1416,12 @@
   }
 
   // ---------- recording / export ----------
+  let lastExportUrl = null;
+
   async function recordClips(list, filename, statusEl, progressEl, setBusy){
     if (!list.length) return;
     setBusy(true);
+    await acquireWakeLock();
     statusEl.className = 'status-line show';
     statusEl.textContent = 'Preparing…';
     progressEl.style.width = '0%';
@@ -1373,9 +1442,30 @@
       statusEl.textContent = 'This browser does not support recording video from canvas.';
       setBusy(false); return;
     }
-    const mimeCandidates = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
-    const mime = mimeCandidates.find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
-    const recorder = new MediaRecorder(combinedStream, { mimeType: mime });
+    // Safari has never supported WebM recording via MediaRecorder — only MP4 (since
+    // 14.1). Trying webm first (better compression, works on Chrome/Firefox) and
+    // falling back to mp4 covers both, instead of just failing outright on Safari.
+    const mimeCandidates = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+    const mime = mimeCandidates.find(m => MediaRecorder.isTypeSupported(m));
+    if (!mime){
+      statusEl.className = 'status-line show err';
+      statusEl.textContent = 'This browser cannot record video at all (no supported format found). Try Chrome, Firefox, or an up-to-date Safari.';
+      setBusy(false);
+      try { combinedStream.getTracks().forEach(t => t.stop()); } catch(e){}
+      return;
+    }
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+    filename = filename.replace(/\.\w+$/, '') + '.' + ext;
+    let recorder;
+    try {
+      recorder = new MediaRecorder(combinedStream, { mimeType: mime });
+    } catch (e) {
+      statusEl.className = 'status-line show err';
+      statusEl.textContent = 'This browser refused to start recording (' + (e.message || 'unknown error') + '). Try a different browser.';
+      setBusy(false);
+      try { combinedStream.getTracks().forEach(t => t.stop()); } catch(e2){}
+      return;
+    }
     const chunks = [];
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
     const recordingDone = new Promise(resolve => { recorder.onstop = resolve; });
@@ -1388,26 +1478,39 @@
       recorder.start(250);
       drawLoop();
       const wasPaused = video.paused;
+      const totalFootage = list.reduce((s,c) => s + (c.end - c.start), 0) || 1;
+      let completedFootage = 0;
       for (let i = 0; i < list.length; i++){
         const c = list[i];
-        statusEl.textContent = list.length > 1 ? `Recording clip ${i+1} of ${list.length}…` : 'Recording…';
+        const clipLen = c.end - c.start;
+        statusEl.textContent = list.length > 1 ? `Recording clip ${i+1} of ${list.length}… (${Math.round(clipLen)}s of footage — this plays out in real time, so it takes about that long)` : `Recording… (${Math.round(clipLen)}s, plays in real time)`;
         video.currentTime = c.start;
         await waitSeeked();
         await video.play();
         await new Promise(resolve => {
           const onTime = () => {
+            // Update continuously as this clip plays, not just once it finishes —
+            // a bar that only moves between clips looks frozen for the entire
+            // length of a single clip, which reads as "not working" even though
+            // it's just playing out in real time as expected.
+            const clipProgress = Math.min(1, Math.max(0, (video.currentTime - c.start) / (clipLen || 1)));
+            const pct = Math.round(((completedFootage + clipProgress*clipLen) / totalFootage) * 100);
+            progressEl.style.width = pct + '%';
             if (video.currentTime >= c.end){ video.pause(); setTimeupdateHandler(null); resolve(); }
           };
           setTimeupdateHandler(onTime);
         });
-        progressEl.style.width = Math.round((i+1)/list.length*100) + '%';
+        completedFootage += clipLen;
+        progressEl.style.width = Math.round((completedFootage/totalFootage) * 100) + '%';
       }
       drawing = false;
       recorder.stop();
       await recordingDone;
       if (!wasPaused) video.play(); else video.pause();
       const blob = new Blob(chunks, { type: mime });
+      if (lastExportUrl) URL.revokeObjectURL(lastExportUrl);
       const url = URL.createObjectURL(blob);
+      lastExportUrl = url;
       statusEl.className = 'status-line show ok';
       statusEl.innerHTML = '';
       const link = document.createElement('a');
@@ -1415,12 +1518,18 @@
       link.href = url; link.download = filename;
       link.textContent = `Download ${filename}`;
       statusEl.appendChild(link);
+      link.click(); // start the download immediately rather than making them click twice
     } catch (err) {
       drawing = false;
       try { if (recorder.state !== 'inactive') recorder.stop(); } catch(e){}
       statusEl.className = 'status-line show err';
       statusEl.textContent = 'Recording failed (' + ((err && err.message) || 'unknown error') + '). Try again — if it keeps happening, try a shorter clip or a different browser.';
     } finally {
+      // Release the capture tracks explicitly — leaving the previous export's
+      // video/audio tracks alive was very likely why a second download in the
+      // same session could come back empty or fail outright.
+      try { combinedStream.getTracks().forEach(t => t.stop()); } catch(e){}
+      releaseWakeLock();
       setBusy(false);
     }
   }
@@ -1428,7 +1537,7 @@
   exportBtn.addEventListener('click', () => {
     const list = getFilteredList().filter(c => c.include).sort((a,b)=>a.start-b.start);
     const gameTag = activeGame === 'all' ? '' : `-match${activeGame+1}`;
-    recordClips(list, `fragcut-${activeTab}s${gameTag}-compiled.webm`, exportStatus, exportProgress, (busy) => {
+    recordClips(list, `codclips-${activeTab}s${gameTag}-compiled.webm`, exportStatus, exportProgress, (busy) => {
       exporting = busy; renderClips();
     });
   });
@@ -1437,7 +1546,7 @@
     if (exporting) return;
     exporting = true; updateExportButtonState();
     const gameTag = games.length > 1 ? `-match${c.gameIndex+1}` : '';
-    await recordClips([c], `fragcut-${activeTab}${gameTag}-${idx+1}.webm`, exportStatus, exportProgress, (busy) => {
+    await recordClips([c], `codclips-${activeTab}${gameTag}-${idx+1}.webm`, exportStatus, exportProgress, (busy) => {
       exporting = busy; updateExportButtonState();
     });
   }
