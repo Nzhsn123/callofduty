@@ -461,6 +461,14 @@
   let customRoi = null;
   let respawnMap = {};
 
+  // Phones/tablets get their own, deliberately slower detection path below —
+  // every timing signal tried so far (the 'seeked' event, requestVideoFrameCallback,
+  // even re-checking actual pixel content) has turned out unreliable on iOS
+  // specifically. Rather than keep guessing at another signal, mobile skips
+  // trusting any of them and just waits a fixed, generous amount of real time
+  // before every capture instead — slower, but not foolable the way the others were.
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.userAgent));
+
   let eventIdSeq = 1;
   let scanning = false;
   let wakeLock = null;
@@ -623,6 +631,14 @@
     return new Promise(resolve => {
       let done = false;
       const finish = () => { if (done) return; done = true; resolve(); };
+      if (isMobile){
+        // No event, no callback — just wait. This is slower than the desktop
+        // path on purpose: every "tell me when it's ready" signal available in
+        // the browser has turned out to fire too early on iOS in practice, so
+        // this deliberately doesn't trust any of them.
+        setTimeout(finish, 450);
+        return;
+      }
       if (typeof video.requestVideoFrameCallback === 'function'){
         // The 'seeked' event only means the browser accepted the seek — on some
         // mobile browsers it can fire before the new frame is actually decoded
@@ -639,7 +655,7 @@
         };
         video.addEventListener('seeked', onSeeked);
       }
-      // Mobile browsers occasionally never fire either signal for a given seek —
+      // Browsers occasionally never fire either signal for a given seek —
       // without this, the whole scan would just hang silently forever on that frame.
       setTimeout(finish, 3000);
     });
@@ -755,11 +771,13 @@
     for (let t = 0; t < duration; t += coarseInterval){
       video.currentTime = t;
       await waitSeeked();
-      rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
       // Crop straight from the video element at full native detail — no full-frame
       // canvas ever gets created, so this stays cheap on memory regardless of the
       // source video's resolution, without losing any detail in the small crop.
-      rctx.drawImage(video, ax, ay, aw, ah, 0, 0, roiCanvas.width, roiCanvas.height);
+      await drawVerifiedFrame(() => {
+        rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
+        rctx.drawImage(video, ax, ay, aw, ah, 0, 0, roiCanvas.width, roiCanvas.height);
+      }, rctx, roiCanvas.width, roiCanvas.height);
       preprocessWhiteText(rctx, roiCanvas.width, roiCanvas.height);
       let hit = false;
       try {
@@ -833,8 +851,10 @@
         const t = Math.min(duration, d + dt);
         video.currentTime = t;
         await waitSeeked();
-        rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
-        rctx.drawImage(video, ax, ay, aw, ah, 0, 0, roiCanvas.width, roiCanvas.height);
+        await drawVerifiedFrame(() => {
+          rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
+          rctx.drawImage(video, ax, ay, aw, ah, 0, 0, roiCanvas.width, roiCanvas.height);
+        }, rctx, roiCanvas.width, roiCanvas.height);
         preprocessWhiteText(rctx, roiCanvas.width, roiCanvas.height);
         try {
           ocrAttempts++;
@@ -855,9 +875,10 @@
     scanning = true; scanDone = false;
     events = []; games = []; respawnMap = {};
     ocrAttempts = 0; ocrFailures = 0;
+    lastFramePixelSum = null;
     await acquireWakeLock();
     detectBigStatus.textContent = 'Loading the reader…';
-    detectSmallStatus.textContent = '';
+    detectSmallStatus.textContent = isMobile ? 'On a phone/tablet — this runs slower on purpose, for reliability. Keep this tab open and the screen on.' : '';
     scanStatus.className = 'status-line';
     scanProgress.style.width = '0%';
     let worker;
@@ -903,7 +924,7 @@
     const rctx = roiCanvas.getContext('2d');
 
     video.pause();
-    const interval = 0.5;
+    const interval = isMobile ? 1 : 0.5; // coarser on mobile to offset the slower per-frame wait above
     const totalSpan = segments.reduce((s, seg) => s + (seg.end - seg.start), 0);
     let doneSpan = 0;
     detectBigStatus.textContent = 'Reading kill notifications…';
@@ -913,12 +934,14 @@
       for (let t = seg.start; t < seg.end; t += interval){
         video.currentTime = t;
         await waitSeeked();
-        rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
-        rctx.drawImage(video, tx, ty, tw, th, 0, 0, tw*SCALE, th*SCALE);
-        rctx.drawImage(video, bx, by, bw, bh, 0, th*SCALE, bw*SCALE, bh*SCALE);
-        if (useCustom){
-          rctx.drawImage(video, cx, cy, cw, ch, 0, (th+bh)*SCALE, cw*SCALE, ch*SCALE);
-        }
+        await drawVerifiedFrame(() => {
+          rctx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
+          rctx.drawImage(video, tx, ty, tw, th, 0, 0, tw*SCALE, th*SCALE);
+          rctx.drawImage(video, bx, by, bw, bh, 0, th*SCALE, bw*SCALE, bh*SCALE);
+          if (useCustom){
+            rctx.drawImage(video, cx, cy, cw, ch, 0, (th+bh)*SCALE, cw*SCALE, ch*SCALE);
+          }
+        }, rctx, roiCanvas.width, roiCanvas.height);
         preprocessCanvas(rctx, roiCanvas.width, roiCanvas.height);
         try {
           ocrAttempts++;
