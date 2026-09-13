@@ -51,6 +51,12 @@
   }
   .hero h1 em{ font-style:normal; color:var(--kill); }
   .hero-sub{ color:var(--muted); font-size:14.5px; line-height:1.6; margin:0; max-width:580px; }
+  .platform-notice{
+    display:inline-block; margin-top:16px; padding:9px 14px;
+    background: rgba(255,106,26,0.08); border:1px solid var(--kill-dim);
+    border-radius:4px; font-size:12.5px; color:var(--text); line-height:1.5; max-width:580px;
+  }
+  .platform-notice b{ color: var(--kill-bright); }
 
   /* tactical hazard-stripe divider — used once, sparingly */
   .hazard{
@@ -246,6 +252,7 @@
     <div class="brand">CALLOFDUTY<span>CLIPS</span></div>
     <h1>Every <em>Call of Duty</em> kill, cut automatically.</h1>
     <p class="hero-sub">Upload your Warzone, Black Ops, or Modern Warfare gameplay and get every kill, death, and killing streak cut into its own clip — automatically, in your browser, free. Built for players who want highlights and montages without opening an editor.</p>
+    <div class="platform-notice"><b>Desktop/laptop only</b> — mobile browsers don't reliably support the video processing this needs. Keep this tab open and active while detecting or downloading; switching away pauses the work until you come back.</div>
   </div>
 </header>
 <div class="hazard"></div>
@@ -1038,11 +1045,14 @@
         doneSpan += interval;
         const pct = 35 + Math.round(doneSpan/totalSpan*45);
         scanProgress.style.width = pct + '%';
-        const kCount = events.filter(e => e.type === 'kill').length;
-        const dCount = events.filter(e => e.type === 'death').length;
+        // Just time/progress here, not a running kill/death tally — a live
+        // count that shifts around while scanning invites second-guessing
+        // ("is that really only counting me?") more than it helps. The
+        // breakdown that matters is the one shown once scanning is actually
+        // done, where it's a stable number worth trusting.
         detectSmallStatus.textContent = games.length > 1
-          ? `Match ${gi+1}/${games.length} — ${fmtTime(t)} / ${fmtTime(seg.end)} — ${kCount} kills, ${dCount} deaths found so far`
-          : `${fmtTime(t)} / ${fmtTime(seg.end)} — ${kCount} kills, ${dCount} deaths found so far`;
+          ? `Match ${gi+1}/${games.length} — ${fmtTime(t)} / ${fmtTime(seg.end)}`
+          : `${fmtTime(t)} / ${fmtTime(seg.end)}`;
       }
     }
 
@@ -1058,7 +1068,7 @@
     detectBigStatus.textContent = 'Done.';
     const finalKills = events.filter(e => e.type === 'kill').length;
     const finalDeaths = events.filter(e => e.type === 'death').length;
-    detectSmallStatus.textContent = `${finalKills} kill${finalKills===1?'':'s'}, ${finalDeaths} death${finalDeaths===1?'':'s'} found. Building clips…`;
+    detectSmallStatus.textContent = `${finalKills} kill${finalKills===1?'':'s'}, ${finalDeaths} death${finalDeaths===1?'':'s'} — from your own "ELIMINATED"/"KILLCAM" notifications only, not the whole match's kill feed. Building clips…`;
     const failureRate = ocrAttempts > 20 ? ocrFailures / ocrAttempts : 0;
     if (failureRate > 0.5){
       scanStatus.className = 'status-line show err';
@@ -1470,10 +1480,18 @@
     }
     list.forEach((c, idx) => {
       const tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      // Click anywhere on the row to load it into the big player above — the
+      // Preview button alone was too small/easy to miss as the only way to do
+      // this. Interactive controls inside the row stop the click from also
+      // triggering this, so ticking the box or hitting Trim/Download doesn't
+      // unexpectedly yank the player too.
+      tr.addEventListener('click', () => previewClip(c));
 
       const cb = document.createElement('input');
       cb.type = 'checkbox'; cb.checked = c.include;
       cb.onchange = () => { c.include = cb.checked; updateExportButtonState(); };
+      cb.addEventListener('click', (e) => e.stopPropagation());
       const tdCb = document.createElement('td'); tdCb.appendChild(cb);
 
       const tr2 = document.createElement('td');
@@ -1494,7 +1512,7 @@
       const tr4 = document.createElement('td'); tr4.className = 'trim-cell';
       const trimBtn = document.createElement('button');
       trimBtn.className = 'small'; trimBtn.textContent = 'Trim';
-      trimBtn.onclick = () => openTrimEditor(c);
+      trimBtn.onclick = (e) => { e.stopPropagation(); openTrimEditor(c); };
       tr4.appendChild(trimBtn);
 
       const tr5 = document.createElement('td');
@@ -1505,7 +1523,7 @@
       pbtn.className = 'small'; pbtn.textContent = 'Preview';
       pbtn.addEventListener('mouseenter', () => showHoverPreview(pbtn, c));
       pbtn.addEventListener('mouseleave', hideHoverPreview);
-      pbtn.addEventListener('click', () => previewClip(c));
+      pbtn.addEventListener('click', (e) => { e.stopPropagation(); previewClip(c); });
       const dbtn = document.createElement('button');
       dbtn.className = 'small'; dbtn.textContent = 'Download';
       // This download works on its own, with no checkbox needed — the checkbox
@@ -1519,7 +1537,7 @@
       const rowProgress = document.createElement('div');
       rowProgress.className = 'row-progress-wrap';
       rowProgress.innerHTML = '<div class="row-progress-bar"></div>';
-      dbtn.onclick = () => downloadSingleClip(c, idx, rowStatus, rowProgress.firstElementChild);
+      dbtn.onclick = (e) => { e.stopPropagation(); downloadSingleClip(c, idx, rowStatus, rowProgress.firstElementChild); };
       tr6.append(pbtn, dbtn, rowStatus, rowProgress);
 
       tr.append(tdCb, tr2, tr3, tr4, tr5, tr6);
