@@ -31,74 +31,56 @@
   h1,h2,h3{font-family:'Oswald',sans-serif;}
   .data{font-family:'JetBrains Mono', monospace;}
 
-  .hero{
-    padding: 72px 28px 0;
-    border-bottom: 1px solid var(--line);
+  .topbar{
+    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+    padding: 18px 28px; border-bottom: 1px solid var(--line);
     background: linear-gradient(180deg, #0D1319, #0A0E13);
-    position: relative;
-    overflow: hidden;
   }
-  .hero::before{
-    content:'';
-    position:absolute; top:-260px; left:50%; transform:translateX(-50%);
-    width:1000px; height:420px;
-    background: radial-gradient(ellipse, rgba(255,107,53,0.14), transparent 65%);
-    pointer-events:none;
-  }
-  .hero-inner{ max-width: 780px; margin: 0 auto; position:relative; padding-bottom:44px; }
-  .brand{ font-family:'Oswald',sans-serif; font-weight:700; font-size:14px; letter-spacing:1.5px; color:var(--muted); margin-bottom:28px; }
+  .brand{ font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; letter-spacing:1.5px; color:var(--muted); }
   .brand span{ color:var(--kill); }
-  .hero-inner h1{
-    font-family:'Oswald',sans-serif; font-weight:700; font-size:60px; line-height:1.03;
-    margin:0 0 22px; color:var(--text); letter-spacing:-1.5px; max-width:680px;
-  }
-  .hero-sub{ color:var(--muted); font-size:16px; line-height:1.65; margin:0 0 48px; max-width:520px; }
-
-  .timeline-viz{ margin: 0 0 40px; }
-  .timeline-track{
-    position:relative; height:30px;
-    background-image: repeating-linear-gradient(90deg, var(--line) 0, var(--line) 1.5px, transparent 1.5px, transparent 22px);
-    background-position: left bottom;
-    background-size: 100% 9px;
-    background-repeat: repeat-x;
-    border-bottom: 1px solid var(--line);
-  }
-  .tl-hit{
-    position:absolute; bottom:0; width:3px; height:21px;
-    background: var(--kill); border-radius: 1px 1px 0 0;
-    box-shadow: 0 0 10px rgba(255,122,26,0.65);
-  }
-  .timeline-labels{ display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-top:9px; }
-  .timeline-labels span:last-child{ color: var(--kill); }
-
-  .process-row{
-    display:flex; align-items:center; flex-wrap:wrap; gap:14px;
-    font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:0.3px; color:var(--text);
-    padding-bottom: 28px;
-  }
-  .process-row .sep{ color: var(--line); font-size:16px; }
-
-  @media (max-width: 720px){
-    .hero{ padding:48px 20px 0; }
-    .hero-inner h1{ font-size:34px; letter-spacing:-0.5px; }
-    .process-row{ font-size:13px; gap:10px; }
+  .topbar-h1{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; margin:0;
+    color:var(--muted); font-weight:500;
   }
 
-  .stepper{ display:flex; max-width: 640px; margin: 22px auto 0; padding: 0 20px; }
-  .step-node{ flex:1; text-align:center; position:relative; cursor:default; }
-  .step-node .dot{ width:26px; height:26px; border-radius:50%; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); display:flex; align-items:center; justify-content:center; margin: 0 auto 6px; font-family:'JetBrains Mono', monospace; font-size: 12px; }
-  .step-node .lbl{font-size:11px; color:var(--muted);}
-  .step-node::before{ content:''; position:absolute; top:13px; left:-50%; width:100%; height:1px; background: var(--line); z-index:0; }
+  .app-shell{ display:flex; align-items:flex-start; max-width:1180px; margin:0 auto; padding: 28px 20px 60px; gap:32px; }
+  .app-sidebar{
+    flex: 0 0 200px; position:sticky; top:28px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .app-main{ flex:1 1 auto; min-width:0; }
+
+  .stepper{ display:flex; flex-direction:column; gap:0; }
+  .step-node{ display:flex; align-items:center; gap:12px; position:relative; cursor:default; padding: 10px 0; }
+  .step-node .dot{ width:26px; height:26px; border-radius:50%; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono', monospace; font-size: 12px; flex-shrink:0; z-index:1; }
+  .step-node .lbl{font-size:13px; color:var(--muted);}
+  .step-node::before{ content:''; position:absolute; left:13px; top:-4px; width:1px; height:18px; background: var(--line); z-index:0; }
   .step-node:first-child::before{display:none;}
   .step-node.done .dot{background: rgba(63,191,111,0.15); border-color: var(--ok); color: var(--ok);}
   .step-node.active .dot{background: rgba(53,194,255,0.15); border-color: var(--cyan); color: var(--cyan);}
-  .step-node.active .lbl{color: var(--text);}
+  .step-node.active .lbl{color: var(--text); font-weight:600;}
   .step-node.clickable{cursor:pointer;}
 
-  .wizard{ max-width: 760px; margin: 28px auto; padding: 0 20px 60px; }
+  @media (max-width: 860px){
+    .app-shell{ flex-direction:column; gap:18px; }
+    .app-sidebar{ position:static; flex-direction:row; width:100%; overflow-x:auto; gap:4px; }
+    .step-node{ padding:8px 10px 8px 0; }
+    .step-node::before{ display:none; }
+  }
+
+  .wizard{ max-width: 960px; }
   .panel{ background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 22px; }
+  .panel.narrow{ max-width: 480px; }
   .panel h2{font-size: 17px; margin:0 0 6px;}
   .panel .sub{color:var(--muted); font-size:13px; margin: 0 0 18px; line-height:1.5;}
+
+  .split-layout{ display:flex; gap:26px; align-items:flex-start; }
+  .split-video{ flex: 0 0 380px; }
+  .split-info{ flex: 1 1 auto; min-width:0; }
+  @media (max-width: 800px){
+    .split-layout{ flex-direction:column; }
+    .split-video{ flex:none; width:100%; }
+  }
 
   .field{margin-bottom:14px;}
   .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
@@ -220,46 +202,25 @@
 </head>
 <body>
 
-<header class="hero">
-  <div class="hero-inner">
-    <div class="brand">CALLOFDUTY<span>CLIPS</span></div>
-    <h1>Every Call of Duty kill, cut automatically.</h1>
-    <p class="hero-sub">Upload your gameplay. It finds every kill and cuts the clips — no editing.</p>
-
-    <div class="timeline-viz">
-      <div class="timeline-track">
-        <div class="tl-hit" style="left:7%;"></div>
-        <div class="tl-hit" style="left:21%;"></div>
-        <div class="tl-hit" style="left:33%;"></div>
-        <div class="tl-hit" style="left:52%;"></div>
-        <div class="tl-hit" style="left:68%;"></div>
-        <div class="tl-hit" style="left:84%;"></div>
-      </div>
-      <div class="timeline-labels">
-        <span>your recording</span>
-        <span>6 kills found</span>
-      </div>
-    </div>
-
-    <div class="process-row">
-      <span>Upload</span><span class="sep">→</span>
-      <span>Detect</span><span class="sep">→</span>
-      <span>Select</span><span class="sep">→</span>
-      <span>Download</span>
-    </div>
-  </div>
-</header>
-
-<div class="stepper" id="stepper">
-  <div class="step-node" data-step="1"><div class="dot">1</div><div class="lbl">Upload</div></div>
-  <div class="step-node" data-step="2"><div class="dot">2</div><div class="lbl">Setup</div></div>
-  <div class="step-node" data-step="3"><div class="dot">3</div><div class="lbl">Detecting</div></div>
-  <div class="step-node" data-step="4"><div class="dot">4</div><div class="lbl">Your clips</div></div>
+<div class="topbar">
+  <div class="brand">CALLOFDUTY<span>CLIPS</span></div>
+  <h1 class="topbar-h1">Every Call of Duty kill, cut automatically.</h1>
 </div>
 
-<div class="wizard">
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <nav class="stepper" id="stepper">
+      <div class="step-node" data-step="1"><div class="dot">1</div><div class="lbl">Upload</div></div>
+      <div class="step-node" data-step="2"><div class="dot">2</div><div class="lbl">Setup</div></div>
+      <div class="step-node" data-step="3"><div class="dot">3</div><div class="lbl">Detecting</div></div>
+      <div class="step-node" data-step="4"><div class="dot">4</div><div class="lbl">Your clips</div></div>
+    </nav>
+  </aside>
 
-  <div class="panel step-panel" id="step1">
+  <main class="app-main">
+  <div class="wizard">
+
+  <div class="panel step-panel narrow" id="step1">
     <h2>Upload your recording</h2>
     <p class="sub">Multiple matches or one, lobby time included — it sorts that out on its own.</p>
     <div class="field">
@@ -270,7 +231,7 @@
     <div class="hint" id="serverStatus"></div>
   </div>
 
-  <div class="panel step-panel" id="step2" style="display:none;">
+  <div class="panel step-panel narrow" id="step2" style="display:none;">
     <h2>Quick setup</h2>
     <p class="sub">Your name is optional — detection doesn't need it.</p>
     <div class="field">
@@ -286,13 +247,17 @@
 
   <div class="panel step-panel" id="step3" style="display:none;">
     <h2 id="detectTitle">Finding your kills…</h2>
-    <div class="stage" id="stage3"></div>
-    <div class="detect-center">
-      <div class="big-status" id="detectBigStatus">Starting…</div>
-      <div class="small-status" id="detectSmallStatus"></div>
-      <div class="progress-wrap"><div class="progress-bar" id="scanProgress"></div></div>
+    <div class="split-layout">
+      <div class="split-video"><div class="stage" id="stage3"></div></div>
+      <div class="split-info">
+        <div class="detect-center">
+          <div class="big-status" id="detectBigStatus">Starting…</div>
+          <div class="small-status" id="detectSmallStatus"></div>
+          <div class="progress-wrap"><div class="progress-bar" id="scanProgress"></div></div>
+        </div>
+        <div class="status-line" id="scanStatus"></div>
+      </div>
     </div>
-    <div class="status-line" id="scanStatus"></div>
     <div class="btn-row">
       <button class="ghost" data-back="2">Back</button>
     </div>
@@ -302,28 +267,31 @@
     <h2>Your clips</h2>
     <p class="sub">Preview, select, and download — individually or combined.</p>
 
-    <div class="stage" id="stage4"></div>
+    <div class="split-layout">
+      <div class="split-video"><div class="stage" id="stage4"></div></div>
+      <div class="split-info">
+        <div class="tabs" id="gameTabs" style="display:none;"></div>
+        <div class="tabs" id="resultTabs">
+          <button class="active" data-tab="kill" id="tabKill">Kills</button>
+          <button data-tab="streak" id="tabStreak">Killing streaks (2+)</button>
+        </div>
+        <div class="btn-row" style="margin-top:0; margin-bottom:10px;">
+          <button class="small" id="selectAllBtn">Select all</button>
+          <button class="small" id="selectNoneBtn">Select none</button>
+        </div>
+        <table>
+          <thead><tr><th>Include</th><th>Clip</th><th>Range</th><th>Trim</th><th>Events</th><th></th></tr></thead>
+          <tbody id="clipsBody"></tbody>
+        </table>
+        <div class="empty-state" id="clipsEmpty">Nothing detected yet.</div>
 
-    <div class="tabs" id="gameTabs" style="display:none;"></div>
-    <div class="tabs" id="resultTabs">
-      <button class="active" data-tab="kill" id="tabKill">Kills</button>
-      <button data-tab="streak" id="tabStreak">Killing streaks (2+)</button>
+        <div class="btn-row">
+          <button class="primary full" id="exportBtn" disabled>Download compiled video (0 clips)</button>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="exportProgress"></div></div>
+        <div class="status-line" id="exportStatus"></div>
+      </div>
     </div>
-    <div class="btn-row" style="margin-top:0; margin-bottom:10px;">
-      <button class="small" id="selectAllBtn">Select all</button>
-      <button class="small" id="selectNoneBtn">Select none</button>
-    </div>
-    <table>
-      <thead><tr><th>Include</th><th>Clip</th><th>Range</th><th>Trim</th><th>Events</th><th></th></tr></thead>
-      <tbody id="clipsBody"></tbody>
-    </table>
-    <div class="empty-state" id="clipsEmpty">Nothing detected yet.</div>
-
-    <div class="btn-row">
-      <button class="primary full" id="exportBtn" disabled>Download compiled video (0 clips)</button>
-    </div>
-    <div class="progress-wrap"><div class="progress-bar" id="exportProgress"></div></div>
-    <div class="status-line" id="exportStatus"></div>
 
     <details class="advanced">
       <summary>Detection missed things or found extras? Adjust it here</summary>
@@ -359,6 +327,8 @@
     </div>
   </div>
 
+</div>
+  </main>
 </div>
 
 <div id="theatreBackdrop"></div>
