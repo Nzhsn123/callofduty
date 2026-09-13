@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CallOfDutyClips — Automatic Call of Duty Kill Clips</title>
-<meta name="description" content="Upload your Call of Duty gameplay recording and automatically get clips of every kill and killing streak. Free, runs in your browser, no editing required.">
-<meta name="keywords" content="Call of Duty clips, COD kill clips, Call of Duty highlight generator, automatic gameplay clips, Black Ops clips, Warzone clips, COD montage maker">
+<title>CallOfDutyClips — Automatic Kill Clips for Multiplayer, Ranked & Scrims</title>
+<meta name="description" content="Upload your Call of Duty multiplayer VOD — public match, 8v8, scrim block, or ranked series — and automatically get every kill and killing streak cut into its own clip. Free, runs in your browser, no editing required.">
+<meta name="keywords" content="Call of Duty clips, COD kill clips, Call of Duty multiplayer highlights, ranked play clips, COD scrim VOD, 8v8 clips, automatic gameplay clips, Black Ops clips, Warzone clips, COD montage maker">
 <meta property="og:title" content="CallOfDutyClips — Automatic Call of Duty Kill Clips">
 <meta property="og:description" content="Upload your Call of Duty gameplay and get every kill cut into its own clip automatically.">
 <meta property="og:type" content="website">
@@ -13,18 +13,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #05070A;
-    --panel: #0D1219;
-    --panel-2: #131A23;
-    --line: #24303D;
-    --text: #E7ECF1;
-    --muted: #8493A3;
-    --kill: #FF5A1F;
-    --kill-bright: #FF8A3D;
-    --kill-dim: #7A3011;
-    --cyan: #35C2FF;
-    --cyan-dim: #1B5A78;
-    --ok: #3FBF6F;
+    --bg: #06090A;
+    --panel: #0C1512;
+    --panel-2: #111F1A;
+    --line: #26382E;
+    --text: #E9F5ED;
+    --muted: #7E9689;
+    --kill: #A6FF2E;
+    --kill-bright: #C9FF75;
+    --kill-dim: #38520F;
+    --cyan: #FF2C7A;
+    --cyan-dim: #6B1338;
+    --ok: #4FE092;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -60,6 +60,16 @@
   .hero-inner{ max-width: 1020px; margin:0 auto; padding: 26px 28px; }
   .brand{ font-family:'Oswald',sans-serif; font-weight:700; font-size:15px; letter-spacing:2px; color:var(--muted); margin-bottom:18px; }
   .brand span{ color:var(--kill); }
+  .mode-ticker{ display:flex; gap:0; margin-bottom:18px; }
+  .mode-ticker span{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; letter-spacing:1.5px;
+    color: var(--bg); background: var(--kill); padding:5px 12px;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    margin-right:-6px;
+  }
+  .mode-ticker span:nth-child(2){ background: var(--kill-bright); }
+  .mode-ticker span:nth-child(3){ background: var(--cyan); color: var(--text); }
+  .mode-ticker span:nth-child(4){ background: var(--text); }
   .hero h1{
     font-family:'Oswald',sans-serif; font-weight:700; font-size:44px; line-height:1.02;
     margin:0 0 14px; color:var(--text); letter-spacing:-1.5px; max-width:680px;
@@ -318,8 +328,11 @@
 <header class="hero">
   <div class="hero-inner bracket">
     <div class="brand">CALLOFDUTY<span>CLIPS</span></div>
-    <h1>Every <em>Call of Duty</em> kill, cut automatically.</h1>
-    <p class="hero-sub">Upload your Warzone, Black Ops, or Modern Warfare gameplay and get every kill, death, and killing streak cut into its own clip — automatically, in your browser, free. Built for players who want highlights and montages without opening an editor.</p>
+    <div class="mode-ticker">
+      <span>PUBLIC MATCH</span><span>8v8</span><span>SCRIMS</span><span>RANKED</span>
+    </div>
+    <h1>Pubs. 8s. Scrims. Ranked. <em>Every kill, cut.</em></h1>
+    <p class="hero-sub">Upload the VOD — a public lobby, an 8v8, a scrim block, or a full ranked series — and get every elimination and killing streak cut into its own clip automatically, in your browser, free. No editor, no timestamps to hunt down.</p>
     <div class="platform-notice"><b>Works on desktop and mobile</b> — desktop is the most reliable. See the upload requirements below for the format/size that works best, especially on phones.</div>
   </div>
 </header>
@@ -329,12 +342,12 @@
   <div class="readout">WHY PLAYERS USE THIS</div>
   <div class="benefits">
   <div class="benefit">
-    <div class="b-title">Zero editing</div>
-    <div class="b-line">It reads your game's own kill notifications and cuts the clip for you.</div>
+    <div class="b-title">Works across every mode</div>
+    <div class="b-line">Public lobbies, 8v8, scrim blocks, ranked series — it reads the same "ELIMINATED" notification your game shows in all of them.</div>
   </div>
   <div class="benefit">
     <div class="b-title">No trimming needed</div>
-    <div class="b-line">Got lobby time, loading screens, or more than one match in the recording? Don't worry about any of that — upload it as-is and it cuts out just the kills.</div>
+    <div class="b-line">Got lobby time, loading screens, or a whole scrim block's worth of matches in one recording? Don't worry about any of that — upload it as-is and it cuts out just the kills.</div>
   </div>
   <div class="benefit">
     <div class="b-title">Ready to post</div>
@@ -355,7 +368,7 @@
 
   <div class="panel step-panel" id="step1">
     <h2>Upload your recording</h2>
-    <p class="sub">Multiple matches or one, lobby time included — it sorts that out on its own.</p>
+    <p class="sub">One match or a whole scrim block, lobby time included — it sorts that out on its own.</p>
     <div class="field">
       <label>Recording</label>
       <div class="drop-zone" id="dropZone">
@@ -416,7 +429,7 @@
       <summary>Upload requirements — read this first</summary>
       <dl class="req-table">
         <dt>Format</dt>
-        <dd><b>.mp4 (H.264)</b> works best and loads everywhere. Avoid HEVC/H.265 .mov files if you can (the default on some iPhone recordings) — plays fine on Safari, but often fails to load at all on desktop Chrome/Firefox.</dd>
+        <dd><b>.mp4 (H.264)</b> works best and loads everywhere. Avoid HEVC/H.265 .mov files if you can (the default on some iPhone recordings) — plays fine on Safari, but often fails to load at all on desktop Chrome/Firefox. Old-style <b>.mpeg/.mpg</b> files (MPEG-1/2) are a different format from MP4 despite the similar name, and browsers generally can't play them at all — convert to .mp4 first (e.g. with HandBrake, free).</dd>
         <dt>Resolution</dt>
         <dd><b>1080p is the sweet spot.</b> Detection only reads a small cropped region of the frame, so 1440p/4K adds real processing time and memory risk without improving accuracy — if your device lets you choose a recording quality, pick 1080p.</dd>
         <dt>Aspect ratio</dt>
@@ -470,6 +483,7 @@
           <p class="hint" style="margin-top:0;">Scrub the video above to a moment showing your kill banner (like the example), click the button below, then drag a box around <b>just the banner text</b> — not the whole HUD, not the minimap.</p>
           <div class="btn-row" style="margin-top:0;">
             <button id="drawRoiBtnFallback">Draw a box around your kill banner</button>
+            <button id="rescanBtnFallback" style="display:none;">Rescan now</button>
           </div>
           <div class="hint" id="roiStatusFallback"></div>
         </div>
@@ -622,6 +636,7 @@
   const eventsEmpty = document.getElementById('eventsEmpty');
   const drawRoiBtnFallback = document.getElementById('drawRoiBtnFallback');
   const rescanBtn = document.getElementById('rescanBtn');
+  const rescanBtnFallback = document.getElementById('rescanBtnFallback');
   const roiStatus = document.getElementById('roiStatus');
   const roiStatusFallback = document.getElementById('roiStatusFallback');
   const frameCanvas = document.getElementById('frameCanvas');
@@ -886,6 +901,10 @@
       : 'Region set — it\'ll be checked for the "ELIMINATED"/kill-counter text. Add your name above too if this box is a kill feed rather than the kill banner itself.';
     roiStatus.textContent = msg;
     roiStatusFallback.textContent = msg;
+    // The rescan button was easy to miss, sitting in a separate "Adjust"
+    // section further down — now it appears right here, right after drawing,
+    // so the very next thing to do is obvious.
+    rescanBtnFallback.style.display = 'inline-block';
   });
   function clearRoiBoxEl(){ roiOverlay.querySelectorAll('.roi-box').forEach(n => n.remove()); }
   function drawRoiBoxEl(x0,y0,x1,y1){
@@ -897,6 +916,7 @@
     roiOverlay.appendChild(div);
   }
   rescanBtn.addEventListener('click', () => { scanDone = false; showStep(3); });
+  rescanBtnFallback.addEventListener('click', () => { scanDone = false; showStep(3); });
 
   // ---------- shared helpers ----------
   function fmtTime(t){
